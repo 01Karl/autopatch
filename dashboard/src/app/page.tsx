@@ -30,7 +30,7 @@ type ScheduleRow = {
   enabled: number;
 };
 
-type NavKey = 'overview' | 'get-started' | 'machines' | 'history' | 'update-reports';
+type NavKey = 'overview' | 'get-started' | 'playbooks' | 'machines' | 'history' | 'update-reports';
 
 type ServiceAccountRow = {
   id: number;
@@ -66,6 +66,7 @@ const DEFAULT_BASE_PATH = 'environments';
 const NAV_ITEMS: NavItem[] = [
   { key: 'overview', label: 'Overview', icon: FiHome },
   { key: 'get-started', label: 'Get started', icon: FiPlayCircle },
+  { key: 'playbooks', label: 'Playbooks', icon: FiServer },
   { key: 'machines', label: 'Machines', icon: FiMonitor },
   { key: 'history', label: 'History', icon: FiClock },
   { key: 'update-reports', label: 'Update reports', icon: FiBarChart2 },
@@ -513,33 +514,42 @@ export default function HomePage({ searchParams }: { searchParams?: DashboardSea
                   </div>
                 </section>
 
-                <section className="table-card p-6 space-y-4">
-                  <h2 className="text-lg font-semibold">Bygg patchrutin (Ansible Playbook)</h2>
-                  <p className="text-sm text-slate-600">Skapa en patchrutin utifrån inventory/cluster och generera ett playbook-utkast som du kan klistra in i repo eller pipeline.</p>
+
+              </section>
+            )}
+
+            {activeView === 'playbooks' && (
+              <section className="space-y-4">
+                <section className="table-card p-6 space-y-3">
+                  <h2 className="text-lg font-semibold">Bygg playbooks för patchning</h2>
+                  <p className="text-sm text-slate-600">Skapa patch-playbooks för enskilda Linux-servrar, host-grupper eller kluster och generera ett playbook-utkast direkt i gränssnittet.</p>
                   <ul className="text-xs text-slate-500 list-disc pl-5">
                     {playbookRoutines.map((routine) => (
                       <li key={routine.key}><strong>{routine.label}:</strong> {routine.description}</li>
                     ))}
                   </ul>
+                </section>
 
+                <section className="table-card p-6 space-y-4">
+                  <h2 className="text-lg font-semibold">Playbook builder (Ansible)</h2>
                   <form method="get" className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
                     <input type="hidden" name="view" value={activeView} />
                     <input type="hidden" name="env" value={selectedEnv} />
                     <input type="hidden" name="basePath" value={selectedBasePath} />
-                    <label className="text-xs text-slate-500">Routine template
+                    <label className="text-xs text-slate-500">Template
                       <select className="mt-1 w-full rounded-md border border-slate-300 bg-white px-2 py-1.5 text-sm" name="routineTemplate" defaultValue={routineTemplate}>
                         {playbookRoutines.map((routine) => (
                           <option key={routine.key} value={routine.key}>{routine.label}</option>
                         ))}
                       </select>
                     </label>
-                    <label className="text-xs text-slate-500">Routine name
+                    <label className="text-xs text-slate-500">Playbook name
                       <input className="mt-1 w-full rounded-md border border-slate-300 bg-white px-2 py-1.5 text-sm" name="routineName" defaultValue={routineName} />
                     </label>
-                    <label className="text-xs text-slate-500">Hosts / group
+                    <label className="text-xs text-slate-500">Target hosts / group / cluster
                       <input className="mt-1 w-full rounded-md border border-slate-300 bg-white px-2 py-1.5 text-sm" name="routineHosts" defaultValue={routineHosts} />
                     </label>
-                    <label className="text-xs text-slate-500">Serial
+                    <label className="text-xs text-slate-500">Serial batches
                       <input className="mt-1 w-full rounded-md border border-slate-300 bg-white px-2 py-1.5 text-sm" name="routineSerial" type="number" min={1} max={20} defaultValue={routineSerial} />
                     </label>
                     <label className="text-xs text-slate-500 flex items-end gap-2 pb-2">
@@ -555,6 +565,7 @@ export default function HomePage({ searchParams }: { searchParams?: DashboardSea
                 </section>
               </section>
             )}
+
 
             {activeView === 'machines' && (
               <>
