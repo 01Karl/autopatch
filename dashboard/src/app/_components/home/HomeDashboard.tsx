@@ -4,9 +4,10 @@ import { getFreeIPAConfigPath, getPlaybookRoutines } from '@/lib/config';
 import { getFreeIPAConfig } from '@/lib/freeipa';
 import { cookies } from 'next/headers';
 import { mergeInventories } from '@/lib/inventory';
-import { FiMonitor, FiRefreshCw, FiServer } from 'react-icons/fi';
+import { FiMonitor, FiServer } from 'react-icons/fi';
 import ManagerSidebarNav from '@/app/_components/layout/ManagerSidebarNav';
 import { AppButton, AppButtonLink } from '@/app/_components/ui/AppButton';
+import LinkTabs from '@/app/_components/ui/LinkTabs';
 import { buildPatchRoutineYaml } from '@/app/_lib/playbook-routine';
 
 type RunRow = {
@@ -58,6 +59,7 @@ const INVENTORY_ENVS = ['prod', 'qa', 'dev'] as const;
 const ENV_OPTIONS = ['all', ...INVENTORY_ENVS] as const;
 const DEFAULT_BASE_PATH = 'environments';
 const OVERVIEW_VIEW_KEYS = ['overview', 'get-started', 'playbooks', 'machines', 'history', 'update-reports'] as const;
+const HOME_OVERVIEW_TABS = ['summary', 'health', 'automation', 'activity'] as const;
 
 function pct(ok: number, total: number) {
   return total ? ((ok / total) * 100).toFixed(1) : '0.0';
@@ -99,6 +101,7 @@ type DashboardSearchParams = {
   routineSerial?: string;
   elSecurityOnly?: string;
   routineTemplate?: string;
+  overviewTab?: string;
 };
 
 
@@ -119,6 +122,9 @@ export default function HomePage({ searchParams }: { searchParams?: DashboardSea
   const selectedDistribution = searchParams?.distribution || 'all';
   const selectedPlatform = searchParams?.platform || 'all';
   const selectedCluster = searchParams?.cluster || 'all';
+  const activeOverviewTab = HOME_OVERVIEW_TABS.includes((searchParams?.overviewTab || '') as (typeof HOME_OVERVIEW_TABS)[number])
+    ? (searchParams?.overviewTab as (typeof HOME_OVERVIEW_TABS)[number])
+    : 'summary';
 
   const runs = db.prepare('SELECT * FROM runs ORDER BY id DESC LIMIT 50').all() as RunRow[];
   const schedules = db.prepare('SELECT id,name,env,day_of_week,time_hhmm,enabled FROM schedules ORDER BY id DESC').all() as ScheduleRow[];
@@ -193,6 +199,8 @@ export default function HomePage({ searchParams }: { searchParams?: DashboardSea
   const withAssessmentCount = machineRows.filter((row) => row.periodicAssessment === 'Yes').length;
   const automationCoverage = machineRows.length ? Math.round((withAssessmentCount / machineRows.length) * 100) : 0;
   const managedBySchedules = machineRows.filter((row) => row.associatedSchedules !== '-').length;
+  const overviewTabBaseHref = `/?view=overview&env=${selectedEnv}&basePath=${selectedBasePath}`;
+  const recentRuns = envRuns.slice(0, 8);
 
   const routineTemplate = searchParams?.routineTemplate || playbookRoutines[0]?.key || 'linux-standard';
   const routineName = searchParams?.routineName || 'Patch Linux servers (EL & Debian)';
@@ -236,18 +244,44 @@ export default function HomePage({ searchParams }: { searchParams?: DashboardSea
         <ManagerSidebarNav activeView={activeView} selectedEnv={selectedEnv} selectedBasePath={selectedBasePath} />
 
         <section className="main-pane">
-          <p className="pane-context-text">Operations workflow · Följ fleet-hälsa, automation och plattformsstatus från en samlad översikt.</p>
-          <section className="command-bar">
-            <div className="command-left">
-              <AppButton type="button"><FiRefreshCw /> Refresh</AppButton>
-              <AppButton type="button">Inventory sync</AppButton>
-              <AppButton type="button">Run compliance scan</AppButton>
-            </div>
-            <div className="command-right">
-              <AppButtonLink href={csvHref} download="autopatch-runs.csv">Export to CSV</AppButtonLink>
-              {latestRun?.report_xlsx && <AppButtonLink href={`/${latestRun.report_xlsx}`}>Export Excel</AppButtonLink>}
-            </div>
-          </section>
+          <p className="pane-context-text">Operations workspace · Samma tabmeny som maskin-vyerna för tydligare struktur i huvudöversikten.</p>
+
+          {activeView === 'overview' && (
+            <section className="table-card p-4 space-y-3">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <h2 className="text-lg font-semibold">Overview workspace</h2>
+                  <p className="text-xs text-slate-500">Välj fokusområde för att se sammanfattning, hälsa, automation eller aktivitet.</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <AppButtonLink href={csvHref} download="autopatch-runs.csv">Export to CSV</AppButtonLink>
+                  {latestRun?.report_xlsx && <AppButtonLink href={`/${latestRun.report_xlsx}`}>Export Excel</AppButtonLink>}
+                </div>
+              </div>
+
+              <LinkTabs
+                activeKey={activeOverviewTab}
+                containerClassName="machine-actions-row"
+                baseTabClassName="machine-content-tab"
+                activeTabClassName="active"
+                tabs={[
+                  { key: 'summary', label: 'Summary', href: `${overviewTabBaseHref}&overviewTab=summary` },
+                  { key: 'health', label: 'Health status', href: `${overviewTabBaseHref}&overviewTab=health` },
+                  { key: 'automation', label: 'Automation', href: `${overviewTabBaseHref}&overviewTab=automation` },
+                  { key: 'activity', label: 'Recent activity', href: `${overviewTabBaseHref}&overviewTab=activity` },
+                ]}
+              />
+            </section>
+          )}
+
+          {activeView !== 'overview' && (
+            <section className="command-bar">
+              <div className="command-right ml-auto">
+                <AppButtonLink href={csvHref} download="autopatch-runs.csv">Export to CSV</AppButtonLink>
+                {latestRun?.report_xlsx && <AppButtonLink href={`/${latestRun.report_xlsx}`}>Export Excel</AppButtonLink>}
+              </div>
+            </section>
+          )}
 
           <section className="content-area space-y-5">
             <section className="table-card">
@@ -264,14 +298,13 @@ export default function HomePage({ searchParams }: { searchParams?: DashboardSea
               </div>
             </section>
 
-            {activeView === 'overview' && (
+            {activeView === 'overview' && activeOverviewTab === 'summary' && (
               <>
                 <div className="kpi-grid">
                   <article className="kpi-card"><p className="kpi-title">Managed nodes</p><p className="kpi-value">{inventory.server_count}</p></article>
                   <article className="kpi-card"><p className="kpi-title">Linux / Unix / FreeBSD</p><p className="kpi-value">{linuxCount} / {unixCount} / {freebsdCount}</p></article>
                   <article className="kpi-card"><p className="kpi-title">Automation coverage</p><p className="kpi-value text-emerald-700">{automationCoverage}%</p></article>
-                  <article className="kpi-card"><p className="kpi-title">Queued or running jobs</p><p className="kpi-value text-amber-700">{pendingRuns}</p></article>
-                  <article className="kpi-card"><p className="kpi-title">Failed workflows</p><p className="kpi-value text-rose-700">{failedRuns}</p></article>
+                  <article className="kpi-card"><p className="kpi-title">Schedules attached</p><p className="kpi-value">{managedBySchedules}</p></article>
                 </div>
 
                 <section className="panel-grid">
@@ -299,6 +332,85 @@ export default function HomePage({ searchParams }: { searchParams?: DashboardSea
                   </article>
                 </section>
               </>
+            )}
+
+            {activeView === 'overview' && activeOverviewTab === 'health' && (
+              <section className="table-card">
+                <div className="table-head"><h2>Health status by environment</h2><span className="chip">Signals from inventory + recent runs</span></div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead><tr><th>Environment</th><th>Nodes</th><th>Inventory source</th><th>Run status</th><th>Compliance</th></tr></thead>
+                    <tbody>
+                      {inventoryByEnv.map((item) => (
+                        <tr key={item.env}>
+                          <td>{item.env.toUpperCase()}</td>
+                          <td>{item.server_count}</td>
+                          <td>{item.source}</td>
+                          <td>{failedRuns > 0 ? 'Needs attention' : 'Stable'}</td>
+                          <td>{pct(totals.ok, totals.targets)}%</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+            )}
+
+            {activeView === 'overview' && activeOverviewTab === 'automation' && (
+              <section className="grid gap-4 lg:grid-cols-2">
+                <article className="table-card">
+                  <div className="table-head"><h2>Automation coverage</h2></div>
+                  <div className="p-4 space-y-2 text-sm">
+                    <p className="flex items-center justify-between"><span>Periodic assessment coverage</span><strong>{automationCoverage}%</strong></p>
+                    <p className="flex items-center justify-between"><span>Machines on schedule</span><strong>{managedBySchedules} / {machineRows.length}</strong></p>
+                    <p className="flex items-center justify-between"><span>Queued workflow jobs</span><strong>{pendingRuns}</strong></p>
+                  </div>
+                </article>
+
+                <article className="table-card">
+                  <div className="table-head"><h2>Active schedules</h2><span className="chip">{envSchedules.length} configured</span></div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead><tr><th>Name</th><th>Environment</th><th>Window</th><th>Status</th></tr></thead>
+                      <tbody>
+                        {envSchedules.map((schedule) => (
+                          <tr key={schedule.id}>
+                            <td>{schedule.name}</td>
+                            <td>{schedule.env.toUpperCase()}</td>
+                            <td>{weekdayLabel(schedule.day_of_week)} {schedule.time_hhmm}</td>
+                            <td>{schedule.enabled ? 'Enabled' : 'Disabled'}</td>
+                          </tr>
+                        ))}
+                        {envSchedules.length === 0 && <tr><td colSpan={4} className="text-slate-500">Inga scheman hittades för valt environment.</td></tr>}
+                      </tbody>
+                    </table>
+                  </div>
+                </article>
+              </section>
+            )}
+
+            {activeView === 'overview' && activeOverviewTab === 'activity' && (
+              <section className="table-card">
+                <div className="table-head"><h2>Recent workflow activity</h2><span className="chip">Last {recentRuns.length} runs</span></div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead><tr><th>ID</th><th>Started</th><th>Environment</th><th>Status</th><th>Success</th><th>Targets</th></tr></thead>
+                    <tbody>
+                      {recentRuns.map((run) => (
+                        <tr key={run.id}>
+                          <td>{run.id}</td>
+                          <td>{run.started_at}</td>
+                          <td>{run.env.toUpperCase()}</td>
+                          <td>{statusLabel(run.status)}</td>
+                          <td>{run.success_pct}%</td>
+                          <td>{run.total_targets}</td>
+                        </tr>
+                      ))}
+                      {recentRuns.length === 0 && <tr><td colSpan={6} className="text-slate-500">Inga körningar hittades ännu.</td></tr>}
+                    </tbody>
+                  </table>
+                </div>
+              </section>
             )}
 
             {activeView === 'get-started' && (
