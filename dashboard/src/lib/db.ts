@@ -43,7 +43,17 @@ db.exec(`
     enabled INTEGER NOT NULL DEFAULT 1,
     last_trigger_key TEXT
   );
+
+  CREATE TABLE IF NOT EXISTS service_accounts (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL UNIQUE,
+    purpose TEXT NOT NULL,
+    username TEXT NOT NULL,
+    secret TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+  );
 `);
+
 
 export default db;
 export { reportsDir };

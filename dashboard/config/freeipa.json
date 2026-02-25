@@ -1,0 +1,5 @@
+{
+  "baseUrl": "https://ipa.example.com",
+  "usernameSuffix": "@EXAMPLE.COM",
+  "verifyTls": true
+}

@@ -1,4 +1,8 @@
 import db from '@/lib/db';
+import { decodeSession, getSessionCookieName } from '@/lib/auth';
+import { getFreeIPAConfigPath, getPlaybookRoutines } from '@/lib/config';
+import { getFreeIPAConfig } from '@/lib/freeipa';
+import { cookies } from 'next/headers';
 import { mergeInventories } from '@/lib/inventory';
 import type { IconType } from 'react-icons';
 import { FiBarChart2, FiClock, FiHome, FiMonitor, FiPlayCircle, FiRefreshCw, FiServer } from 'react-icons/fi';
@@ -27,6 +31,14 @@ type ScheduleRow = {
 };
 
 type NavKey = 'overview' | 'get-started' | 'machines' | 'history' | 'update-reports';
+
+type ServiceAccountRow = {
+  id: number;
+  name: string;
+  purpose: string;
+  username: string;
+  created_at: string;
+};
 
 type NavItem = {
   key: NavKey;
@@ -98,19 +110,93 @@ type DashboardSearchParams = {
   routineHosts?: string;
   routineSerial?: string;
   elSecurityOnly?: string;
+  routineTemplate?: string;
 };
 
 function buildPatchRoutineYaml({
+  routineTemplate,
   routineName,
   routineHosts,
   routineSerial,
   elSecurityOnly,
 }: {
+  routineTemplate: string;
   routineName: string;
   routineHosts: string;
   routineSerial: number;
   elSecurityOnly: boolean;
 }) {
+  if (routineTemplate === 'cluster-rolling') {
+    return `---
+- name: ${routineName}
+  hosts: ${routineHosts}
+  gather_facts: false
+  become: true
+  serial: 1
+
+  pre_tasks:
+    - name: Drain node from cluster
+      ansible.builtin.shell: /usr/local/bin/clusterctl drain {{ inventory_hostname }}
+      changed_when: true
+
+  tasks:
+    - name: Apply OS updates (EL)
+      ansible.builtin.dnf:
+        name: "*"
+        state: latest
+        update_cache: true
+
+    - name: Reboot node
+      ansible.builtin.reboot:
+        reboot_timeout: 1200
+
+  post_tasks:
+    - name: Wait for node to be healthy in cluster
+      ansible.builtin.shell: /usr/local/bin/clusterctl wait-ready {{ inventory_hostname }}
+      changed_when: false
+
+    - name: Undrain node
+      ansible.builtin.shell: /usr/local/bin/clusterctl undrain {{ inventory_hostname }}
+      changed_when: true`;
+  }
+
+  if (routineTemplate === 'app-maintenance') {
+    return `---
+- name: ${routineName}
+  hosts: ${routineHosts}
+  gather_facts: false
+  become: true
+  serial: ${routineSerial}
+
+  vars:
+    app_service_name: myapp
+
+  pre_tasks:
+    - name: Stoppa applikationstjänst
+      ansible.builtin.service:
+        name: "{{ app_service_name }}"
+        state: stopped
+
+  tasks:
+    - name: Uppdatera paket (Debian/Ubuntu)
+      ansible.builtin.apt:
+        update_cache: true
+        upgrade: dist
+
+    - name: Uppdatera paket (EL)
+      ansible.builtin.dnf:
+        name: "*"
+        state: latest
+        update_cache: true
+        security: ${elSecurityOnly ? 'true' : 'false'}
+
+  post_tasks:
+    - name: Starta applikationstjänst
+      ansible.builtin.service:
+        name: "{{ app_service_name }}"
+        state: started`;
+  }
+
   return `---
 - name: ${routineName}
   hosts: ${routineHosts}
@@ -147,10 +233,6 @@ function buildPatchRoutineYaml({
         exclude: "{{ el_exclude }}"
         lock_timeout: "{{ lock_timeout }}"
       when: os_family == "RedHat"
-      register: el_update
-      retries: 3
-      delay: 10
-      until: el_update is succeeded
 
     - name: Update packages (Debian/Ubuntu)
       ansible.builtin.apt:
@@ -158,10 +240,6 @@ function buildPatchRoutineYaml({
         upgrade: dist
         lock_timeout: "{{ lock_timeout }}"
       when: os_family == "Debian"
-      register: deb_update
-      retries: 3
-      delay: 10
-      until: deb_update is succeeded
 
     - name: Reboot if needed (Debian/Ubuntu)
       ansible.builtin.reboot:
@@ -170,6 +248,7 @@ function buildPatchRoutineYaml({
         - os_family == "Debian"
         - not (ansible_check_mode | default(false))`;
 }
+
 
 export default function HomePage({ searchParams }: { searchParams?: DashboardSearchParams }) {
   const linuxDistributions = ['Ubuntu', 'Debian', 'RHEL', 'Rocky Linux', 'SUSE Linux Enterprise', 'AlmaLinux'] as const;
@@ -188,6 +267,11 @@ export default function HomePage({ searchParams }: { searchParams?: DashboardSea
 
   const runs = db.prepare('SELECT * FROM runs ORDER BY id DESC LIMIT 50').all() as RunRow[];
   const schedules = db.prepare('SELECT id,name,env,day_of_week,time_hhmm,enabled FROM schedules ORDER BY id DESC').all() as ScheduleRow[];
+  const freeipaConfig = getFreeIPAConfig();
+  const playbookRoutines = getPlaybookRoutines();
+  const serviceAccounts = db.prepare('SELECT id, name, purpose, username, created_at FROM service_accounts ORDER BY id DESC').all() as ServiceAccountRow[];
+  const sessionToken = cookies().get(getSessionCookieName())?.value;
+  const session = decodeSession(sessionToken);
   const latestRun = runs[0];
   const envRuns = selectedEnv === 'all' ? runs : runs.filter((run) => run.env === selectedEnv);
   const latestEnvRun = envRuns[0];
@@ -248,11 +332,12 @@ export default function HomePage({ searchParams }: { searchParams?: DashboardSea
     return platformMatch && distributionMatch && resourceTypeMatch && clusterMatch;
   });
 
+  const routineTemplate = searchParams?.routineTemplate || playbookRoutines[0]?.key || 'linux-standard';
   const routineName = searchParams?.routineName || 'Patch Linux servers (EL & Debian)';
   const routineHosts = searchParams?.routineHosts || (selectedCluster !== 'all' ? selectedCluster : 'all');
   const routineSerial = Number.isFinite(Number(searchParams?.routineSerial)) ? Math.min(Math.max(Number(searchParams?.routineSerial), 1), 20) : 1;
   const elSecurityOnly = searchParams?.elSecurityOnly === '1';
-  const generatedPlaybook = buildPatchRoutineYaml({ routineName, routineHosts, routineSerial, elSecurityOnly });
+  const generatedPlaybook = buildPatchRoutineYaml({ routineTemplate, routineName, routineHosts, routineSerial, elSecurityOnly });
 
   const csvHeader = 'id,started_at,env,status,ok_count,failed_count,skipped_count,total_targets,success_pct';
   const csvRows = runs.map((run) => [run.id, run.started_at, run.env, run.status, run.ok_count, run.failed_count, run.skipped_count, run.total_targets, run.success_pct].join(','));
@@ -267,7 +352,12 @@ export default function HomePage({ searchParams }: { searchParams?: DashboardSea
       <header className="top-header">
         <div className="brand">OpenPatch Console</div>
         <input className="header-search" placeholder="Search resources, services and docs" />
-        <div className="header-user">Connie Wilson · CONTOSO</div>
+        <div className="header-user">
+          <span>{session?.username || 'Okänd användare'}</span>
+          <form action="/api/auth/logout" method="post" className="inline">
+            <button className="ghost-btn ml-3" type="submit">Logga ut</button>
+          </form>
+        </div>
       </header>
 
       <div className="shell-layout">
@@ -363,13 +453,86 @@ export default function HomePage({ searchParams }: { searchParams?: DashboardSea
                 </section>
 
                 <section className="table-card p-6 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-lg font-semibold">FreeIPA integration</h2>
+                    <span className="text-xs text-slate-500">API-stöd för central inloggning och service-konton</span>
+                  </div>
+                  <p className="text-xs text-slate-500">Konfiguration läses från fil: <code>{getFreeIPAConfigPath()}</code></p>
+
+                  <form action="/api/freeipa/config" method="post" className="grid gap-3 md:grid-cols-3">
+                    <label className="text-xs text-slate-500">FreeIPA base URL
+                      <input className="mt-1 w-full rounded-md border border-slate-300 px-2 py-1 text-sm" name="baseUrl" defaultValue={freeipaConfig?.base_url || ''} placeholder="https://ipa.example.com" required />
+                    </label>
+                    <label className="text-xs text-slate-500">Username suffix
+                      <input className="mt-1 w-full rounded-md border border-slate-300 px-2 py-1 text-sm" name="usernameSuffix" defaultValue={freeipaConfig?.username_suffix || ''} placeholder="@EXAMPLE.COM" />
+                    </label>
+                    <label className="text-xs text-slate-500">TLS verification
+                      <select className="mt-1 w-full rounded-md border border-slate-300 bg-white px-2 py-1 text-sm" name="verifyTls" defaultValue={String(freeipaConfig?.verify_tls ?? 1)}>
+                        <option value="1">Strict</option>
+                        <option value="0">Disabled (test only)</option>
+                      </select>
+                    </label>
+                    <div className="md:col-span-3">
+                      <button className="primary-btn" type="submit">Spara FreeIPA inställningar</button>
+                    </div>
+                  </form>
+
+                  <form action="/api/freeipa/service-accounts" method="post" className="grid gap-3 md:grid-cols-4">
+                    <label className="text-xs text-slate-500">Namn
+                      <input className="mt-1 w-full rounded-md border border-slate-300 px-2 py-1 text-sm" name="name" placeholder="ansible-git-bot" required />
+                    </label>
+                    <label className="text-xs text-slate-500">Syfte
+                      <input className="mt-1 w-full rounded-md border border-slate-300 px-2 py-1 text-sm" name="purpose" placeholder="Modifiera playbooks och pusha git" required />
+                    </label>
+                    <label className="text-xs text-slate-500">Username
+                      <input className="mt-1 w-full rounded-md border border-slate-300 px-2 py-1 text-sm" name="username" placeholder="svc_ansible_git" required />
+                    </label>
+                    <label className="text-xs text-slate-500">Secret
+                      <input className="mt-1 w-full rounded-md border border-slate-300 px-2 py-1 text-sm" type="password" name="secret" required />
+                    </label>
+                    <div className="md:col-span-4">
+                      <button className="primary-btn" type="submit">Lägg till service-konto</button>
+                    </div>
+                  </form>
+
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead><tr><th>Namn</th><th>Syfte</th><th>Username</th><th>Skapad</th></tr></thead>
+                      <tbody>
+                        {serviceAccounts.map((account) => (
+                          <tr key={account.id}>
+                            <td>{account.name}</td>
+                            <td>{account.purpose}</td>
+                            <td>{account.username}</td>
+                            <td>{account.created_at}</td>
+                          </tr>
+                        ))}
+                        {serviceAccounts.length === 0 && <tr><td colSpan={4} className="text-slate-500">Inga service-konton registrerade ännu.</td></tr>}
+                      </tbody>
+                    </table>
+                  </div>
+                </section>
+
+                <section className="table-card p-6 space-y-4">
                   <h2 className="text-lg font-semibold">Bygg patchrutin (Ansible Playbook)</h2>
                   <p className="text-sm text-slate-600">Skapa en patchrutin utifrån inventory/cluster och generera ett playbook-utkast som du kan klistra in i repo eller pipeline.</p>
+                  <ul className="text-xs text-slate-500 list-disc pl-5">
+                    {playbookRoutines.map((routine) => (
+                      <li key={routine.key}><strong>{routine.label}:</strong> {routine.description}</li>
+                    ))}
+                  </ul>
 
                   <form method="get" className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
                     <input type="hidden" name="view" value={activeView} />
                     <input type="hidden" name="env" value={selectedEnv} />
                     <input type="hidden" name="basePath" value={selectedBasePath} />
+                    <label className="text-xs text-slate-500">Routine template
+                      <select className="mt-1 w-full rounded-md border border-slate-300 bg-white px-2 py-1.5 text-sm" name="routineTemplate" defaultValue={routineTemplate}>
+                        {playbookRoutines.map((routine) => (
+                          <option key={routine.key} value={routine.key}>{routine.label}</option>
+                        ))}
+                      </select>
+                    </label>
                     <label className="text-xs text-slate-500">Routine name
                       <input className="mt-1 w-full rounded-md border border-slate-300 bg-white px-2 py-1.5 text-sm" name="routineName" defaultValue={routineName} />
                     </label>
