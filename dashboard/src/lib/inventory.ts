@@ -115,3 +115,28 @@ export function loadInventorySummary(env: string, basePath: string): InventorySu
     return loadFixtureSummary(repoRoot, env, parseError);
   }
 }
+
+export function mergeInventories(env: string, basePath: string, envOptions: readonly string[]) {
+  const inventoryEnvs = env === 'all' ? envOptions : [env];
+  const inventoryByEnv = inventoryEnvs.map((inventoryEnv) => loadInventorySummary(inventoryEnv, basePath));
+
+  const merged: InventorySummary = {
+    env,
+    inventory_path:
+      env === 'all'
+        ? `${basePath}/{${envOptions.join(',')}}/inventory`
+        : inventoryByEnv[0]?.inventory_path ?? `${basePath}/${env}/inventory`,
+    server_count: inventoryByEnv.reduce((sum, item) => sum + item.server_count, 0),
+    cluster_count: inventoryByEnv.reduce((sum, item) => sum + item.cluster_count, 0),
+    servers: inventoryByEnv.flatMap((item) => item.servers.map((server) => ({ ...server, env: server.env || item.env }))),
+    clusters: inventoryByEnv.flatMap((item) => item.clusters),
+    source: inventoryByEnv.every((item) => item.source === 'fixture')
+      ? 'fixture'
+      : inventoryByEnv.every((item) => item.source === 'ansible')
+        ? 'ansible'
+        : undefined,
+    error: inventoryByEnv.map((item) => item.error).filter(Boolean).join(' | ') || undefined
+  };
+
+  return { merged, inventoryByEnv };
+}

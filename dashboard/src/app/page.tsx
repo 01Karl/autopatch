@@ -1,5 +1,5 @@
 import db from '@/lib/db';
-import { loadInventorySummary, type InventorySummary } from '@/lib/inventory';
+import { mergeInventories } from '@/lib/inventory';
 import type { IconType } from 'react-icons';
 import { FiBarChart2, FiClock, FiHome, FiMonitor, FiPlayCircle, FiRefreshCw, FiServer } from 'react-icons/fi';
 
@@ -100,31 +100,6 @@ type DashboardSearchParams = {
   elSecurityOnly?: string;
 };
 
-function mergeInventories(env: string, basePath: string) {
-  const inventoryEnvs = env === 'all' ? INVENTORY_ENVS : [env as (typeof INVENTORY_ENVS)[number]];
-  const inventoryByEnv = inventoryEnvs.map((inventoryEnv) => loadInventorySummary(inventoryEnv, basePath));
-
-  const merged: InventorySummary = {
-    env,
-    inventory_path:
-      env === 'all'
-        ? `${basePath}/{${INVENTORY_ENVS.join(',')}}/inventory`
-        : inventoryByEnv[0]?.inventory_path ?? `${basePath}/${env}/inventory`,
-    server_count: inventoryByEnv.reduce((sum, item) => sum + item.server_count, 0),
-    cluster_count: inventoryByEnv.reduce((sum, item) => sum + item.cluster_count, 0),
-    servers: inventoryByEnv.flatMap((item) => item.servers.map((server) => ({ ...server, env: server.env || item.env }))),
-    clusters: inventoryByEnv.flatMap((item) => item.clusters),
-    source: inventoryByEnv.every((item) => item.source === 'fixture')
-      ? 'fixture'
-      : inventoryByEnv.every((item) => item.source === 'ansible')
-        ? 'ansible'
-        : undefined,
-    error: inventoryByEnv.map((item) => item.error).filter(Boolean).join(' | ') || undefined,
-  };
-
-  return { merged, inventoryByEnv };
-}
-
 function buildPatchRoutineYaml({
   routineName,
   routineHosts,
@@ -196,31 +171,6 @@ function buildPatchRoutineYaml({
         - not (ansible_check_mode | default(false))`;
 }
 
-function mergeInventories(env: string, basePath: string) {
-  const inventoryEnvs = env === 'all' ? INVENTORY_ENVS : [env as (typeof INVENTORY_ENVS)[number]];
-  const inventoryByEnv = inventoryEnvs.map((inventoryEnv) => loadInventorySummary(inventoryEnv, basePath));
-
-  const merged: InventorySummary = {
-    env,
-    inventory_path:
-      env === 'all'
-        ? `${basePath}/{${INVENTORY_ENVS.join(',')}}/inventory`
-        : inventoryByEnv[0]?.inventory_path ?? `${basePath}/${env}/inventory`,
-    server_count: inventoryByEnv.reduce((sum, item) => sum + item.server_count, 0),
-    cluster_count: inventoryByEnv.reduce((sum, item) => sum + item.cluster_count, 0),
-    servers: inventoryByEnv.flatMap((item) => item.servers.map((server) => ({ ...server, env: server.env || item.env }))),
-    clusters: inventoryByEnv.flatMap((item) => item.clusters),
-    source: inventoryByEnv.every((item) => item.source === 'fixture')
-      ? 'fixture'
-      : inventoryByEnv.every((item) => item.source === 'ansible')
-        ? 'ansible'
-        : undefined,
-    error: inventoryByEnv.map((item) => item.error).filter(Boolean).join(' | ') || undefined,
-  };
-
-  return { merged, inventoryByEnv };
-}
-
 export default function HomePage({ searchParams }: { searchParams?: DashboardSearchParams }) {
   const linuxDistributions = ['Ubuntu', 'Debian', 'RHEL', 'Rocky Linux', 'SUSE Linux Enterprise', 'AlmaLinux'] as const;
   const unixDistributions = ['AIX', 'Solaris'] as const;
@@ -241,7 +191,7 @@ export default function HomePage({ searchParams }: { searchParams?: DashboardSea
   const latestRun = runs[0];
   const envRuns = selectedEnv === 'all' ? runs : runs.filter((run) => run.env === selectedEnv);
   const latestEnvRun = envRuns[0];
-  const { merged: inventory, inventoryByEnv } = mergeInventories(selectedEnv, selectedBasePath);
+  const { merged: inventory, inventoryByEnv } = mergeInventories(selectedEnv, selectedBasePath, INVENTORY_ENVS);
 
   const totals = envRuns.reduce(
     (acc, run) => {
