@@ -1,5 +1,7 @@
 import db from '@/lib/db';
 import { decodeSession, getSessionCookieName } from '@/lib/auth';
+import { getFreeIPAConfigPath, getPlaybookRoutines } from '@/lib/config';
+import { getFreeIPAConfig } from '@/lib/freeipa';
 import { cookies } from 'next/headers';
 import { mergeInventories } from '@/lib/inventory';
 import type { IconType } from 'react-icons';
@@ -29,12 +31,6 @@ type ScheduleRow = {
 };
 
 type NavKey = 'overview' | 'get-started' | 'machines' | 'history' | 'update-reports';
-
-type FreeIPAConfigRow = {
-  base_url: string;
-  username_suffix: string;
-  verify_tls: number;
-};
 
 type ServiceAccountRow = {
   id: number;
@@ -114,19 +110,93 @@ type DashboardSearchParams = {
   routineHosts?: string;
   routineSerial?: string;
   elSecurityOnly?: string;
+  routineTemplate?: string;
 };
 
 function buildPatchRoutineYaml({
+  routineTemplate,
   routineName,
   routineHosts,
   routineSerial,
   elSecurityOnly,
 }: {
+  routineTemplate: string;
   routineName: string;
   routineHosts: string;
   routineSerial: number;
   elSecurityOnly: boolean;
 }) {
+  if (routineTemplate === 'cluster-rolling') {
+    return `---
+- name: ${routineName}
+  hosts: ${routineHosts}
+  gather_facts: false
+  become: true
+  serial: 1
+
+  pre_tasks:
+    - name: Drain node from cluster
+      ansible.builtin.shell: /usr/local/bin/clusterctl drain {{ inventory_hostname }}
+      changed_when: true
+
+  tasks:
+    - name: Apply OS updates (EL)
+      ansible.builtin.dnf:
+        name: "*"
+        state: latest
+        update_cache: true
+
+    - name: Reboot node
+      ansible.builtin.reboot:
+        reboot_timeout: 1200
+
+  post_tasks:
+    - name: Wait for node to be healthy in cluster
+      ansible.builtin.shell: /usr/local/bin/clusterctl wait-ready {{ inventory_hostname }}
+      changed_when: false
+
+    - name: Undrain node
+      ansible.builtin.shell: /usr/local/bin/clusterctl undrain {{ inventory_hostname }}
+      changed_when: true`;
+  }
+
+  if (routineTemplate === 'app-maintenance') {
+    return `---
+- name: ${routineName}
+  hosts: ${routineHosts}
+  gather_facts: false
+  become: true
+  serial: ${routineSerial}
+
+  vars:
+    app_service_name: myapp
+
+  pre_tasks:
+    - name: Stoppa applikationstjänst
+      ansible.builtin.service:
+        name: "{{ app_service_name }}"
+        state: stopped
+
+  tasks:
+    - name: Uppdatera paket (Debian/Ubuntu)
+      ansible.builtin.apt:
+        update_cache: true
+        upgrade: dist
+
+    - name: Uppdatera paket (EL)
+      ansible.builtin.dnf:
+        name: "*"
+        state: latest
+        update_cache: true
+        security: ${elSecurityOnly ? 'true' : 'false'}
+
+  post_tasks:
+    - name: Starta applikationstjänst
+      ansible.builtin.service:
+        name: "{{ app_service_name }}"
+        state: started`;
+  }
+
   return `---
 - name: ${routineName}
   hosts: ${routineHosts}
@@ -163,10 +233,6 @@ function buildPatchRoutineYaml({
         exclude: "{{ el_exclude }}"
         lock_timeout: "{{ lock_timeout }}"
       when: os_family == "RedHat"
-      register: el_update
-      retries: 3
-      delay: 10
-      until: el_update is succeeded
 
     - name: Update packages (Debian/Ubuntu)
       ansible.builtin.apt:
@@ -174,10 +240,6 @@ function buildPatchRoutineYaml({
         upgrade: dist
         lock_timeout: "{{ lock_timeout }}"
       when: os_family == "Debian"
-      register: deb_update
-      retries: 3
-      delay: 10
-      until: deb_update is succeeded
 
     - name: Reboot if needed (Debian/Ubuntu)
       ansible.builtin.reboot:
@@ -186,6 +248,7 @@ function buildPatchRoutineYaml({
         - os_family == "Debian"
         - not (ansible_check_mode | default(false))`;
 }
+
 
 export default function HomePage({ searchParams }: { searchParams?: DashboardSearchParams }) {
   const linuxDistributions = ['Ubuntu', 'Debian', 'RHEL', 'Rocky Linux', 'SUSE Linux Enterprise', 'AlmaLinux'] as const;
@@ -204,7 +267,8 @@ export default function HomePage({ searchParams }: { searchParams?: DashboardSea
 
   const runs = db.prepare('SELECT * FROM runs ORDER BY id DESC LIMIT 50').all() as RunRow[];
   const schedules = db.prepare('SELECT id,name,env,day_of_week,time_hhmm,enabled FROM schedules ORDER BY id DESC').all() as ScheduleRow[];
-  const freeipaConfig = db.prepare('SELECT base_url, username_suffix, verify_tls FROM freeipa_config WHERE id = 1').get() as FreeIPAConfigRow;
+  const freeipaConfig = getFreeIPAConfig();
+  const playbookRoutines = getPlaybookRoutines();
   const serviceAccounts = db.prepare('SELECT id, name, purpose, username, created_at FROM service_accounts ORDER BY id DESC').all() as ServiceAccountRow[];
   const sessionToken = cookies().get(getSessionCookieName())?.value;
   const session = decodeSession(sessionToken);
@@ -268,11 +332,12 @@ export default function HomePage({ searchParams }: { searchParams?: DashboardSea
     return platformMatch && distributionMatch && resourceTypeMatch && clusterMatch;
   });
 
+  const routineTemplate = searchParams?.routineTemplate || playbookRoutines[0]?.key || 'linux-standard';
   const routineName = searchParams?.routineName || 'Patch Linux servers (EL & Debian)';
   const routineHosts = searchParams?.routineHosts || (selectedCluster !== 'all' ? selectedCluster : 'all');
   const routineSerial = Number.isFinite(Number(searchParams?.routineSerial)) ? Math.min(Math.max(Number(searchParams?.routineSerial), 1), 20) : 1;
   const elSecurityOnly = searchParams?.elSecurityOnly === '1';
-  const generatedPlaybook = buildPatchRoutineYaml({ routineName, routineHosts, routineSerial, elSecurityOnly });
+  const generatedPlaybook = buildPatchRoutineYaml({ routineTemplate, routineName, routineHosts, routineSerial, elSecurityOnly });
 
   const csvHeader = 'id,started_at,env,status,ok_count,failed_count,skipped_count,total_targets,success_pct';
   const csvRows = runs.map((run) => [run.id, run.started_at, run.env, run.status, run.ok_count, run.failed_count, run.skipped_count, run.total_targets, run.success_pct].join(','));
@@ -392,6 +457,7 @@ export default function HomePage({ searchParams }: { searchParams?: DashboardSea
                     <h2 className="text-lg font-semibold">FreeIPA integration</h2>
                     <span className="text-xs text-slate-500">API-stöd för central inloggning och service-konton</span>
                   </div>
+                  <p className="text-xs text-slate-500">Konfiguration läses från fil: <code>{getFreeIPAConfigPath()}</code></p>
 
                   <form action="/api/freeipa/config" method="post" className="grid gap-3 md:grid-cols-3">
                     <label className="text-xs text-slate-500">FreeIPA base URL
@@ -450,11 +516,23 @@ export default function HomePage({ searchParams }: { searchParams?: DashboardSea
                 <section className="table-card p-6 space-y-4">
                   <h2 className="text-lg font-semibold">Bygg patchrutin (Ansible Playbook)</h2>
                   <p className="text-sm text-slate-600">Skapa en patchrutin utifrån inventory/cluster och generera ett playbook-utkast som du kan klistra in i repo eller pipeline.</p>
+                  <ul className="text-xs text-slate-500 list-disc pl-5">
+                    {playbookRoutines.map((routine) => (
+                      <li key={routine.key}><strong>{routine.label}:</strong> {routine.description}</li>
+                    ))}
+                  </ul>
 
                   <form method="get" className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
                     <input type="hidden" name="view" value={activeView} />
                     <input type="hidden" name="env" value={selectedEnv} />
                     <input type="hidden" name="basePath" value={selectedBasePath} />
+                    <label className="text-xs text-slate-500">Routine template
+                      <select className="mt-1 w-full rounded-md border border-slate-300 bg-white px-2 py-1.5 text-sm" name="routineTemplate" defaultValue={routineTemplate}>
+                        {playbookRoutines.map((routine) => (
+                          <option key={routine.key} value={routine.key}>{routine.label}</option>
+                        ))}
+                      </select>
+                    </label>
                     <label className="text-xs text-slate-500">Routine name
                       <input className="mt-1 w-full rounded-md border border-slate-300 bg-white px-2 py-1.5 text-sm" name="routineName" defaultValue={routineName} />
                     </label>

@@ -1,4 +1,4 @@
-import db from '@/lib/db';
+import { getFreeIPAFileConfig } from '@/lib/config';
 
 export type FreeIPAConfig = {
   base_url: string;
@@ -7,7 +7,12 @@ export type FreeIPAConfig = {
 };
 
 export function getFreeIPAConfig() {
-  return db.prepare('SELECT base_url, username_suffix, verify_tls FROM freeipa_config WHERE id = 1').get() as FreeIPAConfig;
+  const cfg = getFreeIPAFileConfig();
+  return {
+    base_url: cfg.baseUrl || '',
+    username_suffix: cfg.usernameSuffix || '',
+    verify_tls: cfg.verifyTls === false ? 0 : 1,
+  } as FreeIPAConfig;
 }
 
 export async function verifyFreeIPALogin(username: string, password: string) {

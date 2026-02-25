@@ -30,11 +30,17 @@ npm run dev
 
 I dashboard-vyn **Get started** finns nu en FreeIPA-sektion där du kan:
 
-- ange FreeIPA base URL och optional username-suffix
+- läsa/ändra FreeIPA-inställningar via `dashboard/config/freeipa.json`
 - logga in via FreeIPA (\`/login\`)
 - registrera service-konton för automation
+- välja mellan flera patchrutiner via `dashboard/config/playbook-routines.json`
 
 > Session-signering använder \`AUTOPATCH_SESSION_SECRET\` (sätt den i produktion).
+
+### Konfigurationsfiler
+
+- `dashboard/config/freeipa.json` – FreeIPA endpoint/suffix/TLS
+- `dashboard/config/playbook-routines.json` – tillgängliga playbook-rutiner i UI
 
 ## Docker
 

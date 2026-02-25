@@ -44,14 +44,6 @@ db.exec(`
     last_trigger_key TEXT
   );
 
-  CREATE TABLE IF NOT EXISTS freeipa_config (
-    id INTEGER PRIMARY KEY CHECK (id = 1),
-    base_url TEXT NOT NULL DEFAULT '',
-    username_suffix TEXT NOT NULL DEFAULT '',
-    verify_tls INTEGER NOT NULL DEFAULT 1,
-    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-  );
-
   CREATE TABLE IF NOT EXISTS service_accounts (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL UNIQUE,
@@ -62,11 +54,6 @@ db.exec(`
   );
 `);
 
-db.prepare(
-  `INSERT INTO freeipa_config (id, base_url, username_suffix, verify_tls)
-   VALUES (1, '', '', 1)
-   ON CONFLICT(id) DO NOTHING`
-).run();
 
 export default db;
 export { reportsDir };

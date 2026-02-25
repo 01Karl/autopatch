@@ -1,0 +1,19 @@
+{
+  "routines": [
+    {
+      "key": "linux-standard",
+      "label": "Linux standard patch",
+      "description": "Generell patchrutin för Linux-servrar (EL + Debian)."
+    },
+    {
+      "key": "cluster-rolling",
+      "label": "Cluster rolling update",
+      "description": "Rullar patchning nod-för-nod med drain/undrain för klustergrupper."
+    },
+    {
+      "key": "app-maintenance",
+      "label": "Application maintenance window",
+      "description": "Stoppar app-tjänst, patchar OS och startar app igen under maintenance-fönster."
+    }
+  ]
+}
