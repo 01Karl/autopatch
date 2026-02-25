@@ -79,6 +79,11 @@ export default function MachinesPage({ searchParams }: { searchParams?: SearchPa
   const gridParams = new URLSearchParams(baseParams);
   gridParams.set('view', 'grid');
 
+  const pageSectionLabel = 'Machines';
+  const pageTitle = `Overseer - ${pageSectionLabel}`;
+  const pageSubtitle = 'En samlad översikt av maskiner, filter och kolumnval för ett mjukare och tydligare arbetsflöde.';
+  const pageWorkflowText = 'Standard workflow · Granska maskinmetadata, justera vyer och borra vidare till detaljer på ett lugnt och konsekvent sätt.';
+
   return (
     <main className="azure-shell">
       <input id="column-drawer-toggle" type="checkbox" className="peer sr-only" />
@@ -86,24 +91,24 @@ export default function MachinesPage({ searchParams }: { searchParams?: SearchPa
       <header className="top-header">
         <div className="brand">Overseer Console</div>
         <input className="header-search" placeholder="Search resources, services and docs" />
-        <div className="header-user">Machine inventory</div>
+        <div className="header-user">Overseer · {pageSectionLabel}</div>
       </header>
 
       <section className="shell-page-intro">
         <div className="shell-page-breadcrumbs">
           <a href="/">Home</a>
           <span>›</span>
-          <span>Machines</span>
+          <span>{pageSectionLabel}</span>
         </div>
-        <h1 className="shell-page-title">Overseer Update Manager</h1>
-        <p className="shell-page-subtitle">Machine inventory from mock-data with per-host metadata.</p>
+        <h1 className="shell-page-title">{pageTitle}</h1>
+        <p className="shell-page-subtitle">{pageSubtitle}</p>
       </section>
 
       <div className="shell-layout">
         <ManagerSidebarNav activeView="machines" selectedEnv={selectedEnv} selectedBasePath="environments" />
 
         <section className="main-pane">
-          <p className="pane-context-text">Standard workflow · Review machine metadata and drill into individual machine pages.</p>
+          <p className="pane-context-text">{pageWorkflowText}</p>
           <section className="command-bar">
             <div className="command-left">
               <AppButton type="button"><FiRefreshCw /> Refresh</AppButton>
