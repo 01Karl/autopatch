@@ -372,6 +372,16 @@ export default function HomePage({ searchParams }: { searchParams?: DashboardSea
         </div>
       </header>
 
+      <section className="shell-page-intro">
+        <div className="shell-page-breadcrumbs">
+          <a href="/">Home</a>
+          <span>›</span>
+          <span>Overseer Update Manager</span>
+        </div>
+        <h1 className="shell-page-title">Overseer Update Manager</h1>
+        <p className="shell-page-subtitle">Standard overview and update controls for selected environment.</p>
+      </section>
+
       <div className="shell-layout">
         <aside className="side-nav">
           <input className="side-search" placeholder="Search" />
@@ -420,7 +430,7 @@ export default function HomePage({ searchParams }: { searchParams?: DashboardSea
 
           <section className="content-area space-y-5">
             <div>
-              <h1 className="text-3xl font-semibold">Overseer Update Manager</h1>
+              <h2 className="text-xl font-semibold">Environment overview</h2>
               <p className="mt-1 text-sm text-slate-500">Läser från {selectedBasePath}/{selectedEnv}/inventory via Python-integration.</p>
               {inventory.error && <p className="mt-2 text-sm text-rose-700">Inventory-fel: {inventory.error}</p>}
               {inventoryByEnv.some((item) => item.source === 'fixture') && <p className="mt-2 text-sm text-amber-700">Visar fejkdata från JSON-fixtures för snabb UI-test.</p>}

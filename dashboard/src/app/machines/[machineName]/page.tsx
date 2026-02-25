@@ -146,6 +146,18 @@ export default function MachinePage({ params, searchParams }: MachinePageProps) 
         <div className="header-user">Connie Wilson · CONTOSO</div>
       </header>
 
+      <section className="shell-page-intro">
+        <div className="shell-page-breadcrumbs">
+          <a href="/">Home</a>
+          <span>›</span>
+          <a href={`/?env=${selectedEnv}&view=machines&basePath=${selectedBasePath}`}>Machines</a>
+          <span>›</span>
+          <span>{machineName}</span>
+        </div>
+        <h1 className="shell-page-title">Overseer Update Manager</h1>
+        <p className="shell-page-subtitle">Machine details and update operations for {machineName}.</p>
+      </section>
+
       <div className="shell-layout">
         <aside className="side-nav machine-side-nav">
           <a className="side-link" href={`/?env=${selectedEnv}&view=machines&basePath=${selectedBasePath}`}>
@@ -182,14 +194,6 @@ export default function MachinePage({ params, searchParams }: MachinePageProps) 
 
         <section className="main-pane">
           <section className="machine-content-area">
-            <div className="machine-breadcrumbs">
-              <a href="/">Home</a>
-              <span>›</span>
-              <a href={`/?env=${selectedEnv}&view=machines&basePath=${selectedBasePath}`}>Overseer Update Manager</a>
-              <span>›</span>
-              <span>{machineName}</span>
-            </div>
-
             <section className="machine-title-row">
               <div>
                 <h1 className="machine-title">⚙ {machineName} | Updates</h1>
