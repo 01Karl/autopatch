@@ -46,6 +46,11 @@ type NavItem = {
   icon: IconType;
 };
 
+type NavSection = {
+  title: string;
+  keys: NavKey[];
+};
+
 type MachineRow = {
   name: string;
   env: string;
@@ -70,6 +75,12 @@ const NAV_ITEMS: NavItem[] = [
   { key: 'machines', label: 'Machines', icon: FiMonitor },
   { key: 'history', label: 'History', icon: FiClock },
   { key: 'update-reports', label: 'Update reports', icon: FiBarChart2 },
+];
+
+const NAV_SECTIONS: NavSection[] = [
+  { title: 'Manager', keys: ['overview', 'get-started', 'playbooks'] },
+  { title: 'Machines', keys: ['machines', 'history'] },
+  { title: 'Reports', keys: ['update-reports'] },
 ];
 
 function pct(ok: number, total: number) {
@@ -364,23 +375,30 @@ export default function HomePage({ searchParams }: { searchParams?: DashboardSea
       <div className="shell-layout">
         <aside className="side-nav">
           <input className="side-search" placeholder="Search" />
-          <p className="side-title">Navigation</p>
-          {NAV_ITEMS.map((item) => {
-            const NavIcon = item.icon;
-            return (
-              <a
-                key={item.key}
-                href={`/?env=${selectedEnv}&view=${item.key}&basePath=${selectedBasePath}`}
-                className={`side-link ${activeView === item.key ? 'active' : ''}`}
-              >
-                <span className="side-icon"><NavIcon /></span>
-                <span>{item.label}</span>
-              </a>
-            );
-          })}
+          {NAV_SECTIONS.map((section) => (
+            <section className="side-section" key={section.title}>
+              <p className="side-title">{section.title}</p>
+              {section.keys.map((key) => {
+                const item = NAV_ITEMS.find((navItem) => navItem.key === key);
+                if (!item) return null;
+                const NavIcon = item.icon;
+                return (
+                  <a
+                    key={item.key}
+                    href={`/?env=${selectedEnv}&view=${item.key}&basePath=${selectedBasePath}`}
+                    className={`side-link ${activeView === item.key ? 'active' : ''}`}
+                  >
+                    <span className="side-icon"><NavIcon /></span>
+                    <span>{item.label}</span>
+                  </a>
+                );
+              })}
+            </section>
+          ))}
         </aside>
 
         <section className="main-pane">
+          <p className="pane-context-text">Standard workflow · Review overview, run checks and trigger updates from the command bar.</p>
           <section className="command-bar">
             <div className="command-left">
               <button className="ghost-btn" type="button"><FiRefreshCw /> Refresh</button>

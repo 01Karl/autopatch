@@ -198,6 +198,8 @@ export default function MachinePage({ params, searchParams }: MachinePageProps) 
               <button className="machine-close-btn" type="button">×</button>
             </section>
 
+            <p className="pane-context-text">Machine workflow · Use refresh, update checks, one-time update and scheduling actions from the command row below.</p>
+
             <section className="machine-actions-row">
               <button className="machine-action">Leave new experience</button>
               <button className="machine-action">Refresh</button>
