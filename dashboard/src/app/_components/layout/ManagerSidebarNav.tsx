@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { IconType } from 'react-icons';
 import { FiChevronDown, FiCpu, FiFileText, FiHardDrive, FiHome, FiKey, FiLayers, FiMapPin, FiMonitor, FiPackage, FiPlayCircle, FiRefreshCw, FiSettings, FiShield, FiSliders, FiTool, FiUsers } from 'react-icons/fi';
 
@@ -67,6 +67,9 @@ type ManagerSidebarNavProps = {
 };
 
 const OVERVIEW_VIEWS: ManagerNavKey[] = ['overview', 'get-started', 'playbooks', 'machines', 'history', 'update-reports'];
+
+
+const SIDEBAR_OPEN_GROUPS_STORAGE_KEY = 'manager-sidebar-open-groups';
 
 const NAV_SECTIONS: NavSection[] = [
   {
@@ -167,7 +170,42 @@ export function isValidManagerNavKey(view?: string): view is ManagerNavKey {
 }
 
 export default function ManagerSidebarNav({ activeView, selectedEnv, selectedBasePath }: ManagerSidebarNavProps) {
-  const [openGroups, setOpenGroups] = useState<Partial<Record<ManagerNavKey, boolean>>>({});
+  const parentKeyForActiveView = useMemo(() => (
+    NAV_SECTIONS
+      .flatMap((section) => section.items)
+      .find((item) => item.children?.some((child) => child.key === activeView))?.key
+  ), [activeView]);
+
+  const [openGroups, setOpenGroups] = useState<Partial<Record<ManagerNavKey, boolean>>>({
+    ...(parentKeyForActiveView ? { [parentKeyForActiveView]: true } : {}),
+  });
+
+  useEffect(() => {
+    const storedGroups = window.localStorage.getItem(SIDEBAR_OPEN_GROUPS_STORAGE_KEY);
+
+    if (!storedGroups) {
+      return;
+    }
+
+    try {
+      const parsedGroups = JSON.parse(storedGroups) as Partial<Record<ManagerNavKey, boolean>>;
+      setOpenGroups((prev) => ({ ...parsedGroups, ...prev }));
+    } catch {
+      // Ignore invalid localStorage content and use defaults.
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!parentKeyForActiveView) {
+      return;
+    }
+
+    setOpenGroups((prev) => ({ ...prev, [parentKeyForActiveView]: true }));
+  }, [parentKeyForActiveView]);
+
+  useEffect(() => {
+    window.localStorage.setItem(SIDEBAR_OPEN_GROUPS_STORAGE_KEY, JSON.stringify(openGroups));
+  }, [openGroups]);
 
   const toggleGroup = (key: ManagerNavKey) => {
     setOpenGroups((prev) => ({ ...prev, [key]: !prev[key] }));
