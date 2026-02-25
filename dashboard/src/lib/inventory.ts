@@ -25,18 +25,36 @@ export type InventorySummary = {
   error?: string;
 };
 
+type MockMode = 'force_fixture' | 'force_ansible' | 'auto';
+
+function resolveMockMode(): MockMode {
+  const raw = process.env.USE_MOCK_INVENTORY;
+  if (!raw) return 'auto';
+
+  const normalized = raw.trim().toLowerCase();
+  if (normalized === 'true') return 'force_fixture';
+  if (normalized === 'false') return 'force_ansible';
+  return 'auto';
+}
+
+function emptySummary(env: string, message: string): InventorySummary {
+  return {
+    env,
+    inventory_path: `environments/${env}/inventory`,
+    server_count: 0,
+    cluster_count: 0,
+    servers: [],
+    clusters: [],
+    error: message
+  };
+}
+
 function loadFixtureSummary(repoRoot: string, env: string, originalError?: string): InventorySummary {
   const fixturePath = path.join(repoRoot, 'dashboard', 'src', 'mock-data', 'inventory', `${env}.json`);
   if (!fs.existsSync(fixturePath)) {
     return {
-      env,
-      inventory_path: `environments/${env}/inventory`,
-      server_count: 0,
-      cluster_count: 0,
-      servers: [],
-      clusters: [],
-      source: 'fixture',
-      error: originalError ?? `No fixture inventory found at ${fixturePath}`
+      ...emptySummary(env, originalError ?? `No fixture inventory found at ${fixturePath}`),
+      source: 'fixture'
     };
   }
 
@@ -50,20 +68,20 @@ function loadFixtureSummary(repoRoot: string, env: string, originalError?: strin
     };
   } catch (error) {
     return {
-      env,
-      inventory_path: `environments/${env}/inventory`,
-      server_count: 0,
-      cluster_count: 0,
-      servers: [],
-      clusters: [],
-      source: 'fixture',
-      error: `Invalid fixture JSON for ${env}: ${String(error)}`
+      ...emptySummary(env, `Invalid fixture JSON for ${env}: ${String(error)}`),
+      source: 'fixture'
     };
   }
 }
 
 export function loadInventorySummary(env: string, basePath: string): InventorySummary {
   const repoRoot = path.resolve(process.cwd(), '..');
+  const mode = resolveMockMode();
+
+  if (mode === 'force_fixture') {
+    return loadFixtureSummary(repoRoot, env);
+  }
+
   const scriptPath = path.join(repoRoot, 'inventory_summary.py');
   const proc = spawnSync('python3', [scriptPath, '--env', env, '--base-path', basePath], {
     cwd: repoRoot,
@@ -72,6 +90,12 @@ export function loadInventorySummary(env: string, basePath: string): InventorySu
 
   if (proc.status !== 0) {
     const err = (proc.stderr || proc.stdout || 'Unknown inventory error').trim();
+    if (mode === 'force_ansible') {
+      return {
+        ...emptySummary(env, `${err} (USE_MOCK_INVENTORY=false, fixture fallback disabled)`),
+        source: 'ansible'
+      };
+    }
     return loadFixtureSummary(repoRoot, env, err);
   }
 
@@ -81,6 +105,13 @@ export function loadInventorySummary(env: string, basePath: string): InventorySu
       source: 'ansible'
     };
   } catch (error) {
-    return loadFixtureSummary(repoRoot, env, `Invalid JSON from inventory_summary.py: ${String(error)}`);
+    const parseError = `Invalid JSON from inventory_summary.py: ${String(error)}`;
+    if (mode === 'force_ansible') {
+      return {
+        ...emptySummary(env, `${parseError} (USE_MOCK_INVENTORY=false, fixture fallback disabled)`),
+        source: 'ansible'
+      };
+    }
+    return loadFixtureSummary(repoRoot, env, parseError);
   }
 }

@@ -7,7 +7,18 @@ These JSON files provide fake inventory data for quick UI testing when real Ansi
 - `qa.json`
 - `dev.json`
 
-The dashboard loader (`src/lib/inventory.ts`) automatically falls back to these fixtures if `inventory_summary.py` fails.
+## Toggle mock/real inventory
+Use environment variable `USE_MOCK_INVENTORY`:
+
+- `USE_MOCK_INVENTORY=true` → always use fixture JSON files.
+- `USE_MOCK_INVENTORY=false` → always use Python/Ansible (no fixture fallback).
+- unset/other value → auto mode (try Python first, fallback to fixtures on error).
+
+Example:
+
+```bash
+USE_MOCK_INVENTORY=true npm run dev
+```
 
 ## Shape
 Each file follows the `InventorySummary` contract:
