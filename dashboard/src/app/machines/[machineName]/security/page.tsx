@@ -16,7 +16,7 @@ export default function MachineSecurityPage({ params, searchParams }: Props) {
       <section className="machine-card space-y-4">
         <div className="machine-section">
           <h2>Security posture</h2>
-          <p className="text-sm text-slate-500">CVE exposure, compliance drift och rekommenderade säkerhetsåtgärder för {context.machineName}.</p>
+          <p className="text-sm text-slate-500">CVE exposure, Foreman-liknande advisory-koppling och compliance drift för {context.machineName}.</p>
         </div>
 
         <div className="machine-summary-grid">
@@ -49,12 +49,12 @@ export default function MachineSecurityPage({ params, searchParams }: Props) {
           <h3 className="mb-2 text-sm font-semibold text-slate-700">CVE findings</h3>
           <table className="w-full text-sm">
             <thead>
-              <tr><th>CVE</th><th>Package</th><th>Severity</th><th>Status</th><th>Recommended action</th></tr>
+              <tr><th>CVE</th><th>Package</th><th>Advisory</th><th>CVSS</th><th>Severity</th><th>Status</th><th>Published</th><th>Recommended action</th></tr>
             </thead>
             <tbody>
               {securityFindings.map((finding) => (
                 <tr key={finding.cve}>
-                  <td>{finding.cve}</td><td>{finding.package}</td><td>{finding.severity}</td><td>{finding.status}</td><td>{finding.action}</td>
+                  <td>{finding.cve}</td><td>{finding.package}</td><td>{finding.advisory}</td><td>{finding.cvss}</td><td>{finding.severity}</td><td>{finding.status}</td><td>{finding.published}</td><td>{finding.action}</td>
                 </tr>
               ))}
             </tbody>

@@ -1,0 +1,101 @@
+{
+  "errata": [
+    {
+      "id": "RHSA-2026:1061",
+      "type": "Security",
+      "severity": "Critical",
+      "installable": "Yes",
+      "synopsis": "Important: kernel security and privilege escalation fix",
+      "published": "2026-02-19",
+      "updated": "2026-02-20",
+      "packages": 6,
+      "cves": ["CVE-2026-1301", "CVE-2026-1507"],
+      "rebootSuggested": true
+    },
+    {
+      "id": "RHSA-2026:1098",
+      "type": "Security",
+      "severity": "Important",
+      "installable": "Yes",
+      "synopsis": "openssl and crypto-policies security update",
+      "published": "2026-02-21",
+      "updated": "2026-02-21",
+      "packages": 3,
+      "cves": ["CVE-2026-1123"],
+      "rebootSuggested": false
+    },
+    {
+      "id": "RHBA-2026:0870",
+      "type": "Bugfix",
+      "severity": "Moderate",
+      "installable": "Yes",
+      "synopsis": "chrony stability update and timeout handling improvements",
+      "published": "2026-02-12",
+      "updated": "2026-02-14",
+      "packages": 2,
+      "cves": [],
+      "rebootSuggested": false
+    },
+    {
+      "id": "RHEA-2026:0402",
+      "type": "Enhancement",
+      "severity": "Low",
+      "installable": "Yes",
+      "synopsis": "dnf plugin improvements for content-host reporting",
+      "published": "2026-01-31",
+      "updated": "2026-02-02",
+      "packages": 1,
+      "cves": [],
+      "rebootSuggested": false
+    }
+  ],
+  "securityFindings": [
+    {
+      "cve": "CVE-2026-1123",
+      "package": "openssl",
+      "severity": "High",
+      "status": "Open",
+      "action": "Apply RHSA-2026:1098",
+      "advisory": "RHSA-2026:1098",
+      "cvss": 8.1,
+      "published": "2026-02-21"
+    },
+    {
+      "cve": "CVE-2026-1301",
+      "package": "kernel",
+      "severity": "Critical",
+      "status": "Mitigated in staging",
+      "action": "Promote RHSA-2026:1061 after validation",
+      "advisory": "RHSA-2026:1061",
+      "cvss": 9.4,
+      "published": "2026-02-19"
+    },
+    {
+      "cve": "CVE-2026-1440",
+      "package": "containerd",
+      "severity": "Medium",
+      "status": "Open",
+      "action": "Schedule update in maintenance window",
+      "advisory": "RHBA-2026:0870",
+      "cvss": 6.4,
+      "published": "2026-02-17"
+    }
+  ],
+  "policyChecks": [
+    {
+      "policy": "Critical errata installed within 7 days",
+      "status": "At risk",
+      "details": "RHSA-2026:1061 has not yet reached production"
+    },
+    {
+      "policy": "Only trusted GPG-signed repositories",
+      "status": "Compliant",
+      "details": "No unsigned packages installed"
+    },
+    {
+      "policy": "Reboot after kernel advisory",
+      "status": "Compliant",
+      "details": "Last reboot completed after previous kernel errata"
+    }
+  ]
+}

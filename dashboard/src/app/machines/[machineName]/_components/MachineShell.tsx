@@ -1,5 +1,5 @@
 import { ReactNode } from 'react';
-import { FiActivity, FiArrowLeft, FiBox, FiCheckCircle, FiClock, FiCpu, FiDatabase, FiHardDrive, FiLock, FiRefreshCw, FiSettings, FiShield, FiSliders, FiTool, FiUser } from 'react-icons/fi';
+import { FiActivity, FiArrowLeft, FiBox, FiCheckCircle, FiClock, FiCpu, FiDatabase, FiFileText, FiHardDrive, FiKey, FiLock, FiRefreshCw, FiSettings, FiShield, FiSliders, FiTool, FiUser } from 'react-icons/fi';
 import { MachineSection } from '../_lib/machine-data';
 
 type Props = {
@@ -27,17 +27,34 @@ export default function MachineShell({
   distribution,
   children
 }: Props) {
-  const machineMenuItems: { key: MachineSection; label: string; icon: typeof FiActivity }[] = [
-    { key: 'overview', label: 'Overview', icon: FiActivity },
-    { key: 'updates', label: 'Updates', icon: FiSettings },
-    { key: 'security', label: 'Security', icon: FiShield },
-    { key: 'advisor-recommendations', label: 'Advisor recommendations', icon: FiCheckCircle },
-    { key: 'extensions', label: 'Extensions', icon: FiBox },
-    { key: 'continuous-delivery', label: 'Continuous delivery', icon: FiRefreshCw },
-    { key: 'configuration', label: 'Configuration', icon: FiSliders },
-    { key: 'identity', label: 'Identity', icon: FiUser },
-    { key: 'properties', label: 'Properties', icon: FiCpu },
-    { key: 'locks', label: 'Locks', icon: FiLock }
+  const machineMenuGroups: { heading: string; items: { key: MachineSection; label: string; icon: typeof FiActivity }[] }[] = [
+    {
+      heading: 'Machine menu',
+      items: [
+        { key: 'overview', label: 'Overview', icon: FiActivity },
+        { key: 'updates', label: 'Updates', icon: FiSettings },
+        { key: 'security', label: 'Security', icon: FiShield },
+        { key: 'repository-trust', label: 'Repository trust', icon: FiKey },
+        { key: 'logs', label: 'Logs', icon: FiFileText }
+      ]
+    },
+    {
+      heading: 'Automation & governance',
+      items: [
+        { key: 'advisor-recommendations', label: 'Advisor recommendations', icon: FiCheckCircle },
+        { key: 'extensions', label: 'Extensions', icon: FiBox },
+        { key: 'continuous-delivery', label: 'Continuous delivery', icon: FiRefreshCw },
+        { key: 'configuration', label: 'Configuration', icon: FiSliders }
+      ]
+    },
+    {
+      heading: 'Metadata',
+      items: [
+        { key: 'properties', label: 'Properties', icon: FiCpu },
+        { key: 'identity', label: 'Identity', icon: FiUser },
+        { key: 'locks', label: 'Locks', icon: FiLock }
+      ]
+    }
   ];
 
   const operationItems = [
@@ -77,18 +94,20 @@ export default function MachineShell({
             <span>Back to Machines</span>
           </a>
 
-          <section className="machine-nav-group">
-            <p className="side-title mt-4">Machine menu</p>
-            {machineMenuItems.map((item) => {
-              const ItemIcon = item.icon;
-              return (
-                <a className={`side-link ${activeSection === item.key ? 'active' : ''}`} key={item.label} href={`${machineBasePath}/${item.key}?${machineQuery}`}>
-                  <span className="side-icon"><ItemIcon /></span>
-                  <span>{item.label}</span>
-                </a>
-              );
-            })}
-          </section>
+          {machineMenuGroups.map((group) => (
+            <section className="machine-nav-group" key={group.heading}>
+              <p className="side-title mt-4">{group.heading}</p>
+              {group.items.map((item) => {
+                const ItemIcon = item.icon;
+                return (
+                  <a className={`side-link ${activeSection === item.key ? 'active' : ''}`} key={item.label} href={`${machineBasePath}/${item.key}?${machineQuery}`}>
+                    <span className="side-icon"><ItemIcon /></span>
+                    <span>{item.label}</span>
+                  </a>
+                );
+              })}
+            </section>
+          ))}
 
           <section className="machine-nav-group">
             <p className="side-title mt-4">Operations</p>
