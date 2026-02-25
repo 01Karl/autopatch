@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useState } from 'react';
 import type { IconType } from 'react-icons';
-import { FiChevronDown, FiCpu, FiFileText, FiHardDrive, FiHome, FiLayers, FiMonitor, FiPackage, FiPlayCircle, FiShield, FiSliders, FiTool } from 'react-icons/fi';
+import { FiChevronDown, FiCpu, FiFileText, FiHardDrive, FiHome, FiKey, FiLayers, FiMapPin, FiMonitor, FiPackage, FiPlayCircle, FiRefreshCw, FiSettings, FiShield, FiSliders, FiTool, FiUsers } from 'react-icons/fi';
 
 export type ManagerNavKey =
   | 'overview'
@@ -26,6 +26,18 @@ export type ManagerNavKey =
   | 'configure-playbooks'
   | 'configure-ansible'
   | 'configure-roles-variables'
+  | 'configuration'
+  | 'configuration-locations'
+  | 'configuration-organizations'
+  | 'configuration-settings'
+  | 'content'
+  | 'content-products'
+  | 'content-product-credentials'
+  | 'content-synchronization'
+  | 'content-lifecycle'
+  | 'content-lifecycle-environments'
+  | 'content-content-views'
+  | 'content-activation-keys'
   | 'history'
   | 'update-reports';
 
@@ -115,6 +127,39 @@ const NAV_SECTIONS: NavSection[] = [
       },
     ],
   },
+  {
+    title: 'Configuration',
+    items: [
+      {
+        key: 'configuration',
+        label: 'Configuration',
+        icon: FiSettings,
+        children: [
+          { key: 'configuration-locations', label: 'Locations', href: (env) => `/configuration/locations?env=${env}` },
+          { key: 'configuration-organizations', label: 'Organizations', href: (env) => `/configuration/organizations?env=${env}` },
+          { key: 'configuration-settings', label: 'Settings', href: (env) => `/configuration/settings?env=${env}` },
+        ],
+      },
+    ],
+  },
+  {
+    title: 'Content',
+    items: [
+      { key: 'content-products', label: 'Products', icon: FiPackage, href: (env) => `/content/products?env=${env}` },
+      { key: 'content-product-credentials', label: 'Product Credentials', icon: FiKey, href: (env) => `/content/product-credentials?env=${env}` },
+      { key: 'content-synchronization', label: 'Synchronization', icon: FiRefreshCw, href: (env) => `/content/synchronization?env=${env}` },
+      {
+        key: 'content-lifecycle',
+        label: 'Lifecycle',
+        icon: FiLayers,
+        children: [
+          { key: 'content-lifecycle-environments', label: 'Lifecycle environments', href: (env) => `/content/lifecycle/environments?env=${env}` },
+          { key: 'content-content-views', label: 'Content views', href: (env) => `/content/lifecycle/content-views?env=${env}` },
+          { key: 'content-activation-keys', label: 'Activation Keys', href: (env) => `/content/lifecycle/activation-keys?env=${env}` },
+        ],
+      },
+    ],
+  },
 ];
 
 export function isValidManagerNavKey(view?: string): view is ManagerNavKey {
@@ -164,6 +209,12 @@ export default function ManagerSidebarNav({ activeView, selectedEnv, selectedBas
                         {child.key.startsWith('compliance-') && <FiSliders className="h-3.5 w-3.5" />}
                         {child.key === 'configure-roles-variables' && <FiLayers className="h-3.5 w-3.5" />}
                         {child.key.startsWith('provisioning-') && <FiCpu className="h-3.5 w-3.5" />}
+                        {child.key === 'configuration-locations' && <FiMapPin className="h-3.5 w-3.5" />}
+                        {child.key === 'configuration-organizations' && <FiUsers className="h-3.5 w-3.5" />}
+                        {child.key === 'configuration-settings' && <FiSettings className="h-3.5 w-3.5" />}
+                        {child.key === 'content-lifecycle-environments' && <FiLayers className="h-3.5 w-3.5" />}
+                        {child.key === 'content-content-views' && <FiFileText className="h-3.5 w-3.5" />}
+                        {child.key === 'content-activation-keys' && <FiKey className="h-3.5 w-3.5" />}
                         <span>{child.label}</span>
                       </Link>
                     ))}
