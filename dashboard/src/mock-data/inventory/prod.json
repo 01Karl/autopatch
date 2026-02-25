@@ -4,26 +4,29 @@
   "server_count": 16,
   "cluster_count": 3,
   "servers": [
-    { "hostname": "prod-web-01", "cluster": "web_cluster", "env": "prod" },
-    { "hostname": "prod-web-02", "cluster": "web_cluster", "env": "prod" },
-    { "hostname": "prod-web-03", "cluster": "web_cluster", "env": "prod" },
-    { "hostname": "prod-api-01", "cluster": "api_cluster", "env": "prod" },
-    { "hostname": "prod-api-02", "cluster": "api_cluster", "env": "prod" },
-    { "hostname": "prod-api-03", "cluster": "api_cluster", "env": "prod" },
-    { "hostname": "prod-api-04", "cluster": "api_cluster", "env": "prod" },
-    { "hostname": "prod-db-01", "cluster": "db_cluster", "env": "prod" },
-    { "hostname": "prod-db-02", "cluster": "db_cluster", "env": "prod" },
-    { "hostname": "prod-cache-01", "cluster": "standalone", "env": "prod" },
-    { "hostname": "prod-batch-01", "cluster": "standalone", "env": "prod" },
-    { "hostname": "prod-batch-02", "cluster": "standalone", "env": "prod" },
-    { "hostname": "prod-mq-01", "cluster": "standalone", "env": "prod" },
-    { "hostname": "prod-reports-01", "cluster": "standalone", "env": "prod" },
-    { "hostname": "prod-jump-01", "cluster": "standalone", "env": "prod" },
-    { "hostname": "prod-tools-01", "cluster": "standalone", "env": "prod" }
+    { "hostname": "itweb01a", "cluster": "web_cluster", "env": "prod" },
+    { "hostname": "itweb01b", "cluster": "web_cluster", "env": "prod" },
+    { "hostname": "itweb01c", "cluster": "web_cluster", "env": "prod" },
+
+    { "hostname": "itapi01a", "cluster": "api_cluster", "env": "prod" },
+    { "hostname": "itapi01b", "cluster": "api_cluster", "env": "prod" },
+    { "hostname": "itapi01c", "cluster": "api_cluster", "env": "prod" },
+    { "hostname": "itapi01d", "cluster": "api_cluster", "env": "prod" },
+
+    { "hostname": "itdb01a", "cluster": "db_cluster", "env": "prod" },
+    { "hostname": "itdb01b", "cluster": "db_cluster", "env": "prod" },
+
+    { "hostname": "itcache01", "cluster": "standalone", "env": "prod" },
+    { "hostname": "itbatch01", "cluster": "standalone", "env": "prod" },
+    { "hostname": "itbatch02", "cluster": "standalone", "env": "prod" },
+    { "hostname": "itmq01", "cluster": "standalone", "env": "prod" },
+    { "hostname": "itrpt01", "cluster": "standalone", "env": "prod" },
+    { "hostname": "itjump01", "cluster": "standalone", "env": "prod" },
+    { "hostname": "ittools01", "cluster": "standalone", "env": "prod" }
   ],
   "clusters": [
-    { "name": "api_cluster", "nodes": 4, "hosts": ["prod-api-01", "prod-api-02", "prod-api-03", "prod-api-04"] },
-    { "name": "db_cluster", "nodes": 2, "hosts": ["prod-db-01", "prod-db-02"] },
-    { "name": "web_cluster", "nodes": 3, "hosts": ["prod-web-01", "prod-web-02", "prod-web-03"] }
+    { "name": "api_cluster", "nodes": 4, "hosts": ["itapi01a", "itapi01b", "itapi01c", "itapi01d"] },
+    { "name": "db_cluster", "nodes": 2, "hosts": ["itdb01a", "itdb01b"] },
+    { "name": "web_cluster", "nodes": 3, "hosts": ["itweb01a", "itweb01b", "itweb01c"] }
   ]
 }
