@@ -182,6 +182,7 @@ export default function MachinesPage({ searchParams }: { searchParams?: SearchPa
             <div className="command-left">
               <button className="ghost-btn" type="button"><FiRefreshCw /> Refresh</button>
               <a className="ghost-btn" href={`/?env=${selectedEnv}&view=overview&basePath=environments`}>Back to overview</a>
+              <label htmlFor="column-drawer-toggle" className="ghost-btn cursor-pointer">Edit columns</label>
             </div>
           </section>
 
