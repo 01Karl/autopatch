@@ -1,0 +1,124 @@
+{
+  "packages": [
+    {
+      "slug": "openssl-3.0.7-28.el9_5.1",
+      "name": "openssl",
+      "status": "Upgradable",
+      "installedVersion": "3.0.7-24.el9_4",
+      "upgradableTo": "3.0.7-28.el9_5.1",
+      "installedOn": 32,
+      "applicableTo": 54,
+      "upgradableFor": 28,
+      "description": "OpenSSL cryptography and SSL/TLS toolkit used by system and application stacks.",
+      "summary": "Utilities from the general purpose cryptography library with TLS support.",
+      "group": "System Environment/Libraries",
+      "license": "OpenSSL",
+      "url": "https://www.openssl.org/",
+      "modular": "No",
+      "fileInformation": {
+        "size": "2.8 MB",
+        "filename": "openssl-3.0.7-28.el9_5.1.x86_64.rpm",
+        "checksum": "2f9fcd6d4fb4f4e6f52e9f1fc2e8d69a3f9c728e",
+        "checksumType": "SHA256"
+      },
+      "buildInformation": {
+        "sourceRpm": "openssl-3.0.7-28.el9_5.1.src.rpm",
+        "buildHost": "x86-06.build.eng.bos.redhat.com",
+        "buildTime": "2026-02-19 10:34:12"
+      },
+      "files": [
+        "/usr/bin/openssl",
+        "/usr/lib64/libssl.so.3",
+        "/usr/lib64/libcrypto.so.3"
+      ],
+      "dependencies": [
+        "glibc >= 2.34",
+        "libgcc >= 11.0.0",
+        "ca-certificates"
+      ],
+      "repositories": [
+        "rhel-9-baseos-rpms",
+        "rhel-9-appstream-rpms"
+      ]
+    },
+    {
+      "slug": "kernel-5.14.0-503.14.1.el9_5",
+      "name": "kernel",
+      "status": "Upgradable",
+      "installedVersion": "5.14.0-427.20.1.el9_4",
+      "upgradableTo": "5.14.0-503.14.1.el9_5",
+      "installedOn": 45,
+      "applicableTo": 52,
+      "upgradableFor": 45,
+      "description": "The Linux kernel package containing the core operating system binaries.",
+      "summary": "Linux kernel for enterprise workloads.",
+      "group": "System Environment/Kernel",
+      "license": "GPLv2",
+      "url": "https://www.kernel.org/",
+      "modular": "No",
+      "fileInformation": {
+        "size": "72.5 MB",
+        "filename": "kernel-5.14.0-503.14.1.el9_5.x86_64.rpm",
+        "checksum": "0ba53dcb9ff79f62bf9ce2f97feaa6fd6760e95f",
+        "checksumType": "SHA256"
+      },
+      "buildInformation": {
+        "sourceRpm": "kernel-5.14.0-503.14.1.el9_5.src.rpm",
+        "buildHost": "x86-vm-02.build.eng.rdu.redhat.com",
+        "buildTime": "2026-02-18 22:08:54"
+      },
+      "files": [
+        "/boot/vmlinuz-5.14.0-503.14.1.el9_5.x86_64",
+        "/lib/modules/5.14.0-503.14.1.el9_5.x86_64/kernel"
+      ],
+      "dependencies": [
+        "dracut >= 057",
+        "systemd >= 252",
+        "linux-firmware"
+      ],
+      "repositories": [
+        "rhel-9-baseos-rpms"
+      ]
+    },
+    {
+      "slug": "chrony-4.5-3.el9",
+      "name": "chrony",
+      "status": "Up-to-date",
+      "installedVersion": "4.5-3.el9",
+      "upgradableTo": "—",
+      "installedOn": 28,
+      "applicableTo": 28,
+      "upgradableFor": 0,
+      "description": "Chrony NTP implementation that keeps system clocks synchronized.",
+      "summary": "Modern NTP implementation for Linux systems.",
+      "group": "Applications/System",
+      "license": "GPLv2",
+      "url": "https://chrony-project.org/",
+      "modular": "No",
+      "fileInformation": {
+        "size": "472 KB",
+        "filename": "chrony-4.5-3.el9.x86_64.rpm",
+        "checksum": "8c69fca57a70f58651fd0e195c41c5d7ef89c6d0",
+        "checksumType": "SHA256"
+      },
+      "buildInformation": {
+        "sourceRpm": "chrony-4.5-3.el9.src.rpm",
+        "buildHost": "x86-11.build.eng.rdu.redhat.com",
+        "buildTime": "2026-02-12 05:17:28"
+      },
+      "files": [
+        "/usr/sbin/chronyd",
+        "/usr/bin/chronyc",
+        "/etc/chrony.conf"
+      ],
+      "dependencies": [
+        "glibc >= 2.34",
+        "libcap",
+        "systemd-libs"
+      ],
+      "repositories": [
+        "rhel-9-baseos-rpms"
+      ]
+    }
+  ]
+}

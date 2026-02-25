@@ -1,23 +1,16 @@
 import MachineShell from '../_components/MachineShell';
-import { ContentTab, errata, getMachineContext, MachinePageSearchParams, moduleStreams, repositorySets, updates } from '../_lib/machine-data';
+import { contentPackages, errata, getMachineContext, MachinePageSearchParams, moduleStreams, repositorySets } from '../_lib/machine-data';
+import PackagesTable from './_components/PackagesTable';
 
 type Props = {
   params: { machineName: string };
   searchParams?: MachinePageSearchParams;
 };
 
-const contentTabs: { id: ContentTab; label: string }[] = [
-  { id: 'packages', label: 'Packages' },
-  { id: 'errata', label: 'Errata' },
-  { id: 'module-streams', label: 'Module streams' },
-  { id: 'repository-sets', label: 'Repository sets' }
-];
-
 export default function MachineUpdatesPage({ params, searchParams }: Props) {
   const context = getMachineContext(params.machineName, searchParams);
-  const criticalCount = updates.filter((u) => u.classification === 'Critical').length;
-  const securityCount = updates.filter((u) => u.classification === 'Security').length;
-  const otherCount = updates.filter((u) => u.classification === 'Other').length;
+  const upgradableCount = contentPackages.filter((pkg) => pkg.status !== 'Up-to-date').length;
+  const upToDateCount = contentPackages.filter((pkg) => pkg.status === 'Up-to-date').length;
 
   return (
     <MachineShell activeSection="updates" {...context}>
@@ -25,75 +18,23 @@ export default function MachineUpdatesPage({ params, searchParams }: Props) {
 
       <section className="machine-card">
         <div className="machine-section">
-          <h2>Updates</h2>
+          <h2>Content</h2>
           <div className="machine-pill-row">
-            <span>Total updates ⓘ</span>
-            <strong>{updates.length}</strong>
+            <span>Total packages ⓘ</span>
+            <strong>{contentPackages.length}</strong>
             <span className="machine-divider">|</span>
-            <span>Critical updates ⓘ</span>
-            <strong className="text-amber-700">⚠ {criticalCount}</strong>
+            <span>Upgradable ⓘ</span>
+            <strong className="text-amber-700">⚠ {upgradableCount}</strong>
             <span className="machine-divider">|</span>
-            <span>Security updates ⓘ</span>
-            <strong className="text-amber-700">⚠ {securityCount}</strong>
-            <span className="machine-divider">|</span>
-            <span>Other updates ⓘ</span>
-            <strong>● {otherCount}</strong>
+            <span>Up-to-date ⓘ</span>
+            <strong className="text-emerald-700">✓ {upToDateCount}</strong>
           </div>
         </div>
 
         <p className="text-xs text-slate-500">Last assessed: 2026-02-22 15:12:24</p>
 
-        <section className="machine-content-tabs">
-          {contentTabs.map((tabItem) => (
-            <a
-              key={tabItem.id}
-              className={`machine-content-tab ${context.contentTab === tabItem.id ? 'active' : ''}`}
-              href={`${context.machineBasePath}/updates?${context.machineQuery}&content=${tabItem.id}`}
-            >
-              {tabItem.label}
-            </a>
-          ))}
-        </section>
-
         {context.contentTab === 'packages' && (
-          <>
-            <div className="machine-filter-row">
-              <span className="machine-filter-chip">Search by update name, KB ID...</span>
-              <span className="machine-filter-chip">Classification : All</span>
-              <span className="machine-filter-chip">Severity (MSRC) : All</span>
-              <span className="machine-filter-chip">Reboot required : All</span>
-              <a className="ml-auto link" href="#">Open query</a>
-            </div>
-
-            <p className="text-sm text-slate-600">Showing {updates.length} of {updates.length} packages</p>
-
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr>
-                    <th>Package ↕</th>
-                    <th>Classification ↕</th>
-                    <th>Severity (MSRC) ↕</th>
-                    <th>KB IDs ↕</th>
-                    <th>Reboot required ↕</th>
-                    <th>Published date ↕</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {updates.map((update) => (
-                    <tr key={update.kb}>
-                      <td>{update.name}</td>
-                      <td>{update.classification}</td>
-                      <td>{update.severity}</td>
-                      <td>{update.kb}</td>
-                      <td>{update.reboot}</td>
-                      <td>{update.published}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </>
+          <PackagesTable packages={contentPackages} machineBasePath={context.machineBasePath} machineQuery={context.machineQuery} />
         )}
 
         {context.contentTab === 'errata' && (
@@ -102,7 +43,7 @@ export default function MachineUpdatesPage({ params, searchParams }: Props) {
               <span className="machine-filter-chip">Search errata ID...</span>
               <span className="machine-filter-chip">Type : All</span>
               <span className="machine-filter-chip">Severity : All</span>
-              <span className="machine-filter-chip">Installable : Yes</span>
+              <span className="machine-filter-chip">Installable : Applicable</span>
             </div>
             <p className="text-sm text-slate-600">Showing {errata.length} of {errata.length} errata</p>
             <div className="overflow-x-auto">
@@ -113,8 +54,10 @@ export default function MachineUpdatesPage({ params, searchParams }: Props) {
                     <th>Type ↕</th>
                     <th>Severity ↕</th>
                     <th>Installable ↕</th>
+                    <th>CVEs ↕</th>
+                    <th>Packages ↕</th>
                     <th>Synopsis ↕</th>
-                    <th>Published date ↕</th>
+                    <th>Published / Updated ↕</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -124,8 +67,10 @@ export default function MachineUpdatesPage({ params, searchParams }: Props) {
                       <td>{entry.type}</td>
                       <td>{entry.severity}</td>
                       <td>{entry.installable}</td>
+                      <td>{entry.cves.length > 0 ? entry.cves.join(', ') : '—'}</td>
+                      <td>{entry.packages}</td>
                       <td>{entry.synopsis}</td>
-                      <td>{entry.published}</td>
+                      <td>{entry.published} / {entry.updated}</td>
                     </tr>
                   ))}
                 </tbody>
