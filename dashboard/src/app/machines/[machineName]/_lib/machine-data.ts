@@ -1,6 +1,7 @@
 import { loadInventorySummary } from '@/lib/inventory';
 import logsData from '@/mock-data/machines/logs.json';
 import securityData from '@/mock-data/machines/security.json';
+import packagesData from '@/mock-data/machines/packages.json';
 
 export const ENV_OPTIONS = ['prod', 'qa', 'dev'] as const;
 export const DEFAULT_BASE_PATH = 'environments';
@@ -21,11 +22,46 @@ export type MachineSection =
 
 export type ContentTab = 'packages' | 'errata' | 'module-streams' | 'repository-sets';
 
+
+export type PackageInventoryItem = {
+  slug: string;
+  name: string;
+  status: 'Up-to-date' | 'Upgradable';
+  installedVersion: string;
+  upgradableTo: string;
+  installedOn: number;
+  applicableTo: number;
+  upgradableFor: number;
+  description: string;
+  summary: string;
+  group: string;
+  license: string;
+  url: string;
+  modular: string;
+  fileInformation: {
+    size: string;
+    filename: string;
+    checksum: string;
+    checksumType: string;
+  };
+  buildInformation: {
+    sourceRpm: string;
+    buildHost: string;
+    buildTime: string;
+  };
+  files: string[];
+  dependencies: string[];
+  repositories: string[];
+};
+
+export type PackageTab = 'details' | 'files' | 'dependencies' | 'repositories';
+
 export type MachinePageSearchParams = {
   env?: string;
   basePath?: string;
   content?: string;
   logView?: string;
+  packageTab?: string;
 };
 
 export function getPlatformAndDistribution(index: number) {
@@ -61,6 +97,12 @@ export function getMachineContext(machineNameParam: string, searchParams?: Machi
     searchParams?.logView === 'alerts'
       ? searchParams.logView
       : 'overview';
+  const packageTab: PackageTab =
+    searchParams?.packageTab === 'files' ||
+    searchParams?.packageTab === 'dependencies' ||
+    searchParams?.packageTab === 'repositories'
+      ? searchParams.packageTab
+      : 'details';
 
   const inventory = loadInventorySummary(selectedEnv, selectedBasePath);
   const machineName = decodeURIComponent(machineNameParam);
@@ -77,6 +119,7 @@ export function getMachineContext(machineNameParam: string, searchParams?: Machi
     selectedBasePath,
     contentTab,
     logView,
+    packageTab,
     inventory,
     machineName,
     serverIndex,
@@ -122,6 +165,12 @@ export const linuxLogCategories = logsData.linuxLogCategories;
 export const linuxLogFiles = logsData.linuxLogFiles;
 
 export const logInsights = logsData.logInsights;
+
+export const contentPackages = packagesData.packages as PackageInventoryItem[];
+
+export function getPackageBySlug(slug: string) {
+  return contentPackages.find((pkg) => pkg.slug === slug);
+}
 
 export const advisorHighlights = [
   'Enable automatic CVE triage for critical vulnerabilities.',

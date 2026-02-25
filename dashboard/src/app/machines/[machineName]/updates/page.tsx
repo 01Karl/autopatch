@@ -1,5 +1,6 @@
 import MachineShell from '../_components/MachineShell';
-import { errata, getMachineContext, MachinePageSearchParams, moduleStreams, repositorySets, updates } from '../_lib/machine-data';
+import { contentPackages, errata, getMachineContext, MachinePageSearchParams, moduleStreams, repositorySets } from '../_lib/machine-data';
+import PackagesTable from './_components/PackagesTable';
 
 type Props = {
   params: { machineName: string };
@@ -8,9 +9,8 @@ type Props = {
 
 export default function MachineUpdatesPage({ params, searchParams }: Props) {
   const context = getMachineContext(params.machineName, searchParams);
-  const criticalCount = updates.filter((u) => u.classification === 'Critical').length;
-  const securityCount = updates.filter((u) => u.classification === 'Security').length;
-  const otherCount = updates.filter((u) => u.classification === 'Other').length;
+  const upgradableCount = contentPackages.filter((pkg) => pkg.status !== 'Up-to-date').length;
+  const upToDateCount = contentPackages.filter((pkg) => pkg.status === 'Up-to-date').length;
 
   return (
     <MachineShell activeSection="updates" {...context}>
@@ -18,64 +18,23 @@ export default function MachineUpdatesPage({ params, searchParams }: Props) {
 
       <section className="machine-card">
         <div className="machine-section">
-          <h2>Updates</h2>
+          <h2>Content</h2>
           <div className="machine-pill-row">
-            <span>Total updates ⓘ</span>
-            <strong>{updates.length}</strong>
+            <span>Total packages ⓘ</span>
+            <strong>{contentPackages.length}</strong>
             <span className="machine-divider">|</span>
-            <span>Critical updates ⓘ</span>
-            <strong className="text-amber-700">⚠ {criticalCount}</strong>
+            <span>Upgradable ⓘ</span>
+            <strong className="text-amber-700">⚠ {upgradableCount}</strong>
             <span className="machine-divider">|</span>
-            <span>Security updates ⓘ</span>
-            <strong className="text-amber-700">⚠ {securityCount}</strong>
-            <span className="machine-divider">|</span>
-            <span>Other updates ⓘ</span>
-            <strong>● {otherCount}</strong>
+            <span>Up-to-date ⓘ</span>
+            <strong className="text-emerald-700">✓ {upToDateCount}</strong>
           </div>
         </div>
 
         <p className="text-xs text-slate-500">Last assessed: 2026-02-22 15:12:24</p>
 
-
         {context.contentTab === 'packages' && (
-          <>
-            <div className="machine-filter-row">
-              <span className="machine-filter-chip">Search by update name, KB ID...</span>
-              <span className="machine-filter-chip">Classification : All</span>
-              <span className="machine-filter-chip">Severity (MSRC) : All</span>
-              <span className="machine-filter-chip">Reboot required : All</span>
-              <a className="ml-auto link" href="#">Open query</a>
-            </div>
-
-            <p className="text-sm text-slate-600">Showing {updates.length} of {updates.length} packages</p>
-
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr>
-                    <th>Package ↕</th>
-                    <th>Classification ↕</th>
-                    <th>Severity (MSRC) ↕</th>
-                    <th>KB IDs ↕</th>
-                    <th>Reboot required ↕</th>
-                    <th>Published date ↕</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {updates.map((update) => (
-                    <tr key={update.kb}>
-                      <td>{update.name}</td>
-                      <td>{update.classification}</td>
-                      <td>{update.severity}</td>
-                      <td>{update.kb}</td>
-                      <td>{update.reboot}</td>
-                      <td>{update.published}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </>
+          <PackagesTable packages={contentPackages} machineBasePath={context.machineBasePath} machineQuery={context.machineQuery} />
         )}
 
         {context.contentTab === 'errata' && (

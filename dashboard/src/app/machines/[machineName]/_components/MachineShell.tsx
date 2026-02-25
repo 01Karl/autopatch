@@ -33,7 +33,7 @@ const logsTabs: { id: 'overview' | 'journal' | 'snapshot' | 'alerts'; label: str
 
 const sectionTitles: Record<MachineSection, string> = {
   overview: 'Overview',
-  updates: 'Updates',
+  updates: 'Content',
   security: 'Security',
   'repository-trust': 'Repository trust',
   logs: 'Logs',
@@ -65,7 +65,7 @@ export default function MachineShell({
       heading: 'Machine menu',
       items: [
         { key: 'overview', label: 'Overview', icon: FiActivity },
-        { key: 'updates', label: 'Updates', icon: FiSettings },
+        { key: 'updates', label: 'Content', icon: FiSettings },
         { key: 'security', label: 'Security', icon: FiShield },
         { key: 'repository-trust', label: 'Repository trust', icon: FiKey },
         { key: 'logs', label: 'Logs', icon: FiFileText }
