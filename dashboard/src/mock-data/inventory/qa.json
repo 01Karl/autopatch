@@ -1,0 +1,22 @@
+{
+  "env": "qa",
+  "inventory_path": "environments/qa/inventory",
+  "server_count": 10,
+  "cluster_count": 2,
+  "servers": [
+    { "hostname": "qa-web-01", "cluster": "web_cluster", "env": "qa" },
+    { "hostname": "qa-web-02", "cluster": "web_cluster", "env": "qa" },
+    { "hostname": "qa-api-01", "cluster": "api_cluster", "env": "qa" },
+    { "hostname": "qa-api-02", "cluster": "api_cluster", "env": "qa" },
+    { "hostname": "qa-api-03", "cluster": "api_cluster", "env": "qa" },
+    { "hostname": "qa-db-01", "cluster": "standalone", "env": "qa" },
+    { "hostname": "qa-jump-01", "cluster": "standalone", "env": "qa" },
+    { "hostname": "qa-worker-01", "cluster": "standalone", "env": "qa" },
+    { "hostname": "qa-worker-02", "cluster": "standalone", "env": "qa" },
+    { "hostname": "qa-tools-01", "cluster": "standalone", "env": "qa" }
+  ],
+  "clusters": [
+    { "name": "api_cluster", "nodes": 3, "hosts": ["qa-api-01", "qa-api-02", "qa-api-03"] },
+    { "name": "web_cluster", "nodes": 2, "hosts": ["qa-web-01", "qa-web-02"] }
+  ]
+}
