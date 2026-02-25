@@ -1,0 +1,12 @@
+services:
+  autopatch-web:
+    build: .
+    container_name: autopatch-web
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./reports:/app/reports
+      - ../../../Ansible/environments:/ansible/environments:ro
+    environment:
+      - NODE_ENV=production
+      - PYTHONUNBUFFERED=1
