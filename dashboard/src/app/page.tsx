@@ -30,7 +30,7 @@ type ScheduleRow = {
   enabled: number;
 };
 
-type NavKey = 'overview' | 'get-started' | 'machines' | 'history' | 'update-reports';
+type NavKey = 'overview' | 'get-started' | 'playbooks' | 'machines' | 'history' | 'update-reports';
 
 type ServiceAccountRow = {
   id: number;
@@ -44,6 +44,11 @@ type NavItem = {
   key: NavKey;
   label: string;
   icon: IconType;
+};
+
+type NavSection = {
+  title: string;
+  keys: NavKey[];
 };
 
 type MachineRow = {
@@ -66,9 +71,16 @@ const DEFAULT_BASE_PATH = 'environments';
 const NAV_ITEMS: NavItem[] = [
   { key: 'overview', label: 'Overview', icon: FiHome },
   { key: 'get-started', label: 'Get started', icon: FiPlayCircle },
+  { key: 'playbooks', label: 'Playbooks', icon: FiServer },
   { key: 'machines', label: 'Machines', icon: FiMonitor },
   { key: 'history', label: 'History', icon: FiClock },
   { key: 'update-reports', label: 'Update reports', icon: FiBarChart2 },
+];
+
+const NAV_SECTIONS: NavSection[] = [
+  { title: 'Manager', keys: ['overview', 'get-started', 'playbooks'] },
+  { title: 'Machines', keys: ['machines', 'history'] },
+  { title: 'Reports', keys: ['update-reports'] },
 ];
 
 function pct(ok: number, total: number) {
@@ -350,7 +362,7 @@ export default function HomePage({ searchParams }: { searchParams?: DashboardSea
   return (
     <main className="azure-shell">
       <header className="top-header">
-        <div className="brand">OpenPatch Console</div>
+        <div className="brand">Overseer Console</div>
         <input className="header-search" placeholder="Search resources, services and docs" />
         <div className="header-user">
           <span>{session?.username || 'Okänd användare'}</span>
@@ -360,26 +372,43 @@ export default function HomePage({ searchParams }: { searchParams?: DashboardSea
         </div>
       </header>
 
+      <section className="shell-page-intro">
+        <div className="shell-page-breadcrumbs">
+          <a href="/">Home</a>
+          <span>›</span>
+          <span>Overseer Update Manager</span>
+        </div>
+        <h1 className="shell-page-title">Overseer Update Manager</h1>
+        <p className="shell-page-subtitle">Standard overview and update controls for selected environment.</p>
+      </section>
+
       <div className="shell-layout">
         <aside className="side-nav">
           <input className="side-search" placeholder="Search" />
-          <p className="side-title">Navigation</p>
-          {NAV_ITEMS.map((item) => {
-            const NavIcon = item.icon;
-            return (
-              <a
-                key={item.key}
-                href={`/?env=${selectedEnv}&view=${item.key}&basePath=${selectedBasePath}`}
-                className={`side-link ${activeView === item.key ? 'active' : ''}`}
-              >
-                <span className="side-icon"><NavIcon /></span>
-                <span>{item.label}</span>
-              </a>
-            );
-          })}
+          {NAV_SECTIONS.map((section) => (
+            <section className="side-section" key={section.title}>
+              <p className="side-title">{section.title}</p>
+              {section.keys.map((key) => {
+                const item = NAV_ITEMS.find((navItem) => navItem.key === key);
+                if (!item) return null;
+                const NavIcon = item.icon;
+                return (
+                  <a
+                    key={item.key}
+                    href={`/?env=${selectedEnv}&view=${item.key}&basePath=${selectedBasePath}`}
+                    className={`side-link ${activeView === item.key ? 'active' : ''}`}
+                  >
+                    <span className="side-icon"><NavIcon /></span>
+                    <span>{item.label}</span>
+                  </a>
+                );
+              })}
+            </section>
+          ))}
         </aside>
 
         <section className="main-pane">
+          <p className="pane-context-text">Standard workflow · Review overview, run checks and trigger updates from the command bar.</p>
           <section className="command-bar">
             <div className="command-left">
               <button className="ghost-btn" type="button"><FiRefreshCw /> Refresh</button>
@@ -393,7 +422,7 @@ export default function HomePage({ searchParams }: { searchParams?: DashboardSea
           </section>
 
           <section className="tabs-row">
-            <span className="tab active">OpenPatch Update Manager</span>
+            <span className="tab active">Overseer Update Manager</span>
             <span className="tab">Environment: {selectedEnv.toUpperCase()}</span>
             <span className="tab">Inventory: {inventory.inventory_path}</span>
             <span className="tab">Source: {inventory.source ?? 'ansible'}</span>
@@ -401,7 +430,7 @@ export default function HomePage({ searchParams }: { searchParams?: DashboardSea
 
           <section className="content-area space-y-5">
             <div>
-              <h1 className="text-3xl font-semibold">OpenPatch Update Manager</h1>
+              <h2 className="text-xl font-semibold">Environment overview</h2>
               <p className="mt-1 text-sm text-slate-500">Läser från {selectedBasePath}/{selectedEnv}/inventory via Python-integration.</p>
               {inventory.error && <p className="mt-2 text-sm text-rose-700">Inventory-fel: {inventory.error}</p>}
               {inventoryByEnv.some((item) => item.source === 'fixture') && <p className="mt-2 text-sm text-amber-700">Visar fejkdata från JSON-fixtures för snabb UI-test.</p>}
@@ -513,33 +542,42 @@ export default function HomePage({ searchParams }: { searchParams?: DashboardSea
                   </div>
                 </section>
 
-                <section className="table-card p-6 space-y-4">
-                  <h2 className="text-lg font-semibold">Bygg patchrutin (Ansible Playbook)</h2>
-                  <p className="text-sm text-slate-600">Skapa en patchrutin utifrån inventory/cluster och generera ett playbook-utkast som du kan klistra in i repo eller pipeline.</p>
+
+              </section>
+            )}
+
+            {activeView === 'playbooks' && (
+              <section className="space-y-4">
+                <section className="table-card p-6 space-y-3">
+                  <h2 className="text-lg font-semibold">Bygg playbooks för patchning</h2>
+                  <p className="text-sm text-slate-600">Skapa patch-playbooks för enskilda Linux-servrar, host-grupper eller kluster och generera ett playbook-utkast direkt i gränssnittet.</p>
                   <ul className="text-xs text-slate-500 list-disc pl-5">
                     {playbookRoutines.map((routine) => (
                       <li key={routine.key}><strong>{routine.label}:</strong> {routine.description}</li>
                     ))}
                   </ul>
+                </section>
 
+                <section className="table-card p-6 space-y-4">
+                  <h2 className="text-lg font-semibold">Playbook builder (Ansible)</h2>
                   <form method="get" className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
                     <input type="hidden" name="view" value={activeView} />
                     <input type="hidden" name="env" value={selectedEnv} />
                     <input type="hidden" name="basePath" value={selectedBasePath} />
-                    <label className="text-xs text-slate-500">Routine template
+                    <label className="text-xs text-slate-500">Template
                       <select className="mt-1 w-full rounded-md border border-slate-300 bg-white px-2 py-1.5 text-sm" name="routineTemplate" defaultValue={routineTemplate}>
                         {playbookRoutines.map((routine) => (
                           <option key={routine.key} value={routine.key}>{routine.label}</option>
                         ))}
                       </select>
                     </label>
-                    <label className="text-xs text-slate-500">Routine name
+                    <label className="text-xs text-slate-500">Playbook name
                       <input className="mt-1 w-full rounded-md border border-slate-300 bg-white px-2 py-1.5 text-sm" name="routineName" defaultValue={routineName} />
                     </label>
-                    <label className="text-xs text-slate-500">Hosts / group
+                    <label className="text-xs text-slate-500">Target hosts / group / cluster
                       <input className="mt-1 w-full rounded-md border border-slate-300 bg-white px-2 py-1.5 text-sm" name="routineHosts" defaultValue={routineHosts} />
                     </label>
-                    <label className="text-xs text-slate-500">Serial
+                    <label className="text-xs text-slate-500">Serial batches
                       <input className="mt-1 w-full rounded-md border border-slate-300 bg-white px-2 py-1.5 text-sm" name="routineSerial" type="number" min={1} max={20} defaultValue={routineSerial} />
                     </label>
                     <label className="text-xs text-slate-500 flex items-end gap-2 pb-2">
@@ -555,6 +593,7 @@ export default function HomePage({ searchParams }: { searchParams?: DashboardSea
                 </section>
               </section>
             )}
+
 
             {activeView === 'machines' && (
               <>

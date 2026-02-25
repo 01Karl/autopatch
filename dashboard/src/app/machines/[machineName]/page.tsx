@@ -1,21 +1,11 @@
-import db from '@/lib/db';
 import { loadInventorySummary } from '@/lib/inventory';
-import { FiActivity, FiArrowLeft, FiBox, FiCheckCircle, FiClock, FiCpu, FiDatabase, FiHardDrive, FiLock, FiRefreshCw, FiSettings, FiShield, FiSliders, FiTool, FiUser, FiXCircle } from 'react-icons/fi';
+import { FiActivity, FiArrowLeft, FiBox, FiCheckCircle, FiClock, FiCpu, FiDatabase, FiHardDrive, FiLock, FiRefreshCw, FiSettings, FiShield, FiSliders, FiTool, FiUser } from 'react-icons/fi';
 
 const ENV_OPTIONS = ['prod', 'qa', 'dev'] as const;
 const DEFAULT_BASE_PATH = 'environments';
 
-type MachineTab = 'recommended' | 'history' | 'scheduling';
+type MachineTab = 'properties' | 'capabilities' | 'recommendations' | 'tutorials';
 type ContentTab = 'packages' | 'errata' | 'module-streams' | 'repository-sets';
-
-type ScheduleRow = {
-  id: number;
-  name: string;
-  env: string;
-  day_of_week: string;
-  time_hhmm: string;
-  enabled: number;
-};
 
 function getPlatformAndDistribution(index: number) {
   const linuxDistributions = ['Ubuntu', 'Debian', 'RHEL', 'Rocky Linux', 'SUSE Linux Enterprise', 'AlmaLinux'] as const;
@@ -31,11 +21,6 @@ function getPlatformAndDistribution(index: number) {
         : linuxDistributions[index % linuxDistributions.length];
 
   return { platform, distribution };
-}
-
-function weekdayLabel(day: string) {
-  const map: Record<string, string> = { mon: 'Måndag', tue: 'Tisdag', wed: 'Onsdag', thu: 'Torsdag', fri: 'Fredag', sat: 'Lördag', sun: 'Söndag' };
-  return map[day] ?? day;
 }
 
 type MachinePageProps = {
@@ -78,7 +63,7 @@ export default function MachinePage({ params, searchParams }: MachinePageProps) 
     ? (searchParams?.env as (typeof ENV_OPTIONS)[number])
     : 'prod';
   const selectedBasePath = searchParams?.basePath || DEFAULT_BASE_PATH;
-  const activeTab: MachineTab = searchParams?.tab === 'history' || searchParams?.tab === 'scheduling' ? searchParams.tab : 'recommended';
+  const activeTab: MachineTab = searchParams?.tab === 'properties' || searchParams?.tab === 'recommendations' || searchParams?.tab === 'tutorials' ? searchParams.tab : 'capabilities';
   const contentTab: ContentTab =
     searchParams?.content === 'errata' ||
     searchParams?.content === 'module-streams' ||
@@ -92,7 +77,6 @@ export default function MachinePage({ params, searchParams }: MachinePageProps) 
   const server = serverIndex >= 0 ? inventory.servers[serverIndex] : undefined;
   const { platform, distribution } = getPlatformAndDistribution(Math.max(serverIndex, 0));
 
-  const schedules = db.prepare('SELECT id,name,env,day_of_week,time_hhmm,enabled FROM schedules WHERE env = ? ORDER BY id DESC').all(selectedEnv) as ScheduleRow[];
 
   const resourceType = server?.cluster === 'standalone' ? 'Bare metal server' : 'Virtual machine';
   const patchOrchestration = server?.cluster === 'standalone' ? 'Native package manager' : 'Agent managed rollout';
@@ -103,13 +87,33 @@ export default function MachinePage({ params, searchParams }: MachinePageProps) 
   const otherCount = updates.filter((u) => u.classification === 'Other').length;
 
   const machineBaseHref = `/machines/${encodeURIComponent(machineName)}?env=${selectedEnv}&basePath=${selectedBasePath}`;
-  const recommendedBaseHref = `${machineBaseHref}&tab=recommended`;
+  const propertiesBaseHref = `${machineBaseHref}&tab=properties`;
+  const capabilitiesBaseHref = `${machineBaseHref}&tab=capabilities`;
+  const recommendationsBaseHref = `${machineBaseHref}&tab=recommendations`;
+  const tutorialsBaseHref = `${machineBaseHref}&tab=tutorials`;
 
   const contentTabs: { id: ContentTab; label: string }[] = [
     { id: 'packages', label: 'Packages' },
     { id: 'errata', label: 'Errata' },
     { id: 'module-streams', label: 'Module streams' },
     { id: 'repository-sets', label: 'Repository sets' }
+  ];
+
+  const essentials = [
+    { label: 'Computer name', value: machineName },
+    { label: 'FQDN', value: server?.fqdn || `${machineName}.${selectedEnv}.local` },
+    { label: 'Operating system', value: distribution },
+    { label: 'Operating system version', value: platform === 'Linux' ? 'Kernel 5.15 LTS' : 'Kernel N/A' },
+    { label: 'Manufacturer', value: resourceType === 'Virtual machine' ? 'VMware, Inc.' : 'Dell Technologies' },
+    { label: 'Model', value: resourceType === 'Virtual machine' ? 'VMware Virtual Platform' : 'PowerEdge R760' }
+  ];
+
+  const capabilityCards = [
+    { title: 'Updates', description: 'Customize updates and periodic patching for this machine.', state: 'Periodic assessment enabled' },
+    { title: 'Logs', description: 'Collect and inspect machine logs for troubleshooting.', state: 'Configured' },
+    { title: 'Insights', description: 'Enable monitoring insights for health and performance.', state: 'Connected' },
+    { title: 'Security', description: 'Monitor vulnerabilities and hardening recommendations.', state: 'Monitored' },
+    { title: 'Policies', description: 'Apply policy controls and compliance baselines.', state: 'Assigned' }
   ];
 
   const machineMenuItems = [
@@ -137,10 +141,22 @@ export default function MachinePage({ params, searchParams }: MachinePageProps) 
   return (
     <main className="azure-shell">
       <header className="top-header">
-        <div className="brand">OpenPatch Console</div>
+        <div className="brand">Overseer Console</div>
         <input className="header-search" placeholder="Search machines, updates and docs" />
         <div className="header-user">Connie Wilson · CONTOSO</div>
       </header>
+
+      <section className="shell-page-intro">
+        <div className="shell-page-breadcrumbs">
+          <a href="/">Home</a>
+          <span>›</span>
+          <a href={`/?env=${selectedEnv}&view=machines&basePath=${selectedBasePath}`}>Machines</a>
+          <span>›</span>
+          <span>{machineName}</span>
+        </div>
+        <h1 className="shell-page-title">Overseer Update Manager</h1>
+        <p className="shell-page-subtitle">Machine details and update operations for {machineName}.</p>
+      </section>
 
       <div className="shell-layout">
         <aside className="side-nav machine-side-nav">
@@ -178,14 +194,6 @@ export default function MachinePage({ params, searchParams }: MachinePageProps) 
 
         <section className="main-pane">
           <section className="machine-content-area">
-            <div className="machine-breadcrumbs">
-              <a href="/">Home</a>
-              <span>›</span>
-              <a href={`/?env=${selectedEnv}&view=machines&basePath=${selectedBasePath}`}>OpenPatch Update Manager</a>
-              <span>›</span>
-              <span>{machineName}</span>
-            </div>
-
             <section className="machine-title-row">
               <div>
                 <h1 className="machine-title">⚙ {machineName} | Updates</h1>
@@ -194,6 +202,8 @@ export default function MachinePage({ params, searchParams }: MachinePageProps) 
               <button className="machine-close-btn" type="button">×</button>
             </section>
 
+            <p className="pane-context-text">Machine workflow · Use refresh, update checks, one-time update and scheduling actions from the command row below.</p>
+
             <section className="machine-actions-row">
               <button className="machine-action">Leave new experience</button>
               <button className="machine-action">Refresh</button>
@@ -201,22 +211,39 @@ export default function MachinePage({ params, searchParams }: MachinePageProps) 
               <button className="machine-action">One-time update</button>
               <button className="machine-action">Scheduled updates</button>
               <button className="machine-action">Update settings</button>
-              <button className="machine-action">OpenPatch Update Manager</button>
+              <button className="machine-action">Overseer Update Manager</button>
             </section>
 
             <section className="machine-announcement">
-              <p>Manage VM updates at scale with the new OpenPatch update orchestration flow. <a className="link" href={`/?env=${selectedEnv}&view=machines&basePath=${selectedBasePath}`}>Learn more</a></p>
+              <p>Manage VM updates at scale with the new Overseer update orchestration flow. <a className="link" href={`/?env=${selectedEnv}&view=machines&basePath=${selectedBasePath}`}>Learn more</a></p>
             </section>
 
             {!server && <p className="text-sm text-rose-700">Machine not found in inventory for selected environment.</p>}
 
-            <section className="machine-tab-strip">
-              <a className={`machine-tab ${activeTab === 'recommended' ? 'active' : ''}`} href={recommendedBaseHref}>Recommended updates</a>
-              <a className={`machine-tab ${activeTab === 'history' ? 'active' : ''}`} href={`${machineBaseHref}&tab=history`}>Update history</a>
-              <a className={`machine-tab ${activeTab === 'scheduling' ? 'active' : ''}`} href={`${machineBaseHref}&tab=scheduling`}>Scheduling</a>
+            <section className="machine-card space-y-4">
+              <div className="flex items-center justify-between">
+                <h2 className="text-lg font-semibold">Essentials</h2>
+                <a className="link text-sm" href="#">JSON View</a>
+              </div>
+              <div className="grid gap-x-16 gap-y-3 md:grid-cols-2">
+                {essentials.map((item) => (
+                  <div key={item.label} className="flex items-start gap-3 text-sm">
+                    <span className="min-w-[190px] text-slate-600">{item.label}</span>
+                    <span className="text-slate-400">:</span>
+                    <strong className="font-medium text-slate-900">{item.value}</strong>
+                  </div>
+                ))}
+              </div>
             </section>
 
-            {activeTab === 'recommended' && (
+            <section className="machine-tab-strip">
+              <a className={`machine-tab ${activeTab === 'properties' ? 'active' : ''}`} href={propertiesBaseHref}>Properties</a>
+              <a className={`machine-tab ${activeTab === 'capabilities' ? 'active' : ''}`} href={capabilitiesBaseHref}>Capabilities</a>
+              <a className={`machine-tab ${activeTab === 'recommendations' ? 'active' : ''}`} href={recommendationsBaseHref}>Recommendations</a>
+              <a className={`machine-tab ${activeTab === 'tutorials' ? 'active' : ''}`} href={tutorialsBaseHref}>Tutorials</a>
+            </section>
+
+            {activeTab === 'properties' && (
               <section className="machine-card">
                 <div className="machine-section">
                   <h2>Infrastructure (host) updates</h2>
@@ -273,7 +300,7 @@ export default function MachinePage({ params, searchParams }: MachinePageProps) 
                     <a
                       key={tabItem.id}
                       className={`machine-content-tab ${contentTab === tabItem.id ? 'active' : ''}`}
-                      href={`${recommendedBaseHref}&content=${tabItem.id}`}
+                      href={`${propertiesBaseHref}&content=${tabItem.id}`}
                     >
                       {tabItem.label}
                     </a>
@@ -430,12 +457,25 @@ export default function MachinePage({ params, searchParams }: MachinePageProps) 
                 )}
               </section>
             )}
+            {activeTab === 'capabilities' && (
+              <section className="space-y-4">
+                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                  {capabilityCards.map((card) => (
+                    <article key={card.title} className="rounded-md border border-slate-200 bg-white p-5 shadow-sm">
+                      <h3 className="text-2xl font-semibold text-slate-800">{card.title}</h3>
+                      <p className="mt-3 text-base text-slate-600">{card.description}</p>
+                      <p className="mt-6 text-sm text-slate-700">● {card.state}</p>
+                    </article>
+                  ))}
+                </div>
+              </section>
+            )}
 
-            {activeTab === 'history' && (
+            {activeTab === 'recommendations' && (
               <section className="machine-card">
                 <div className="machine-section">
-                  <h2>Update history</h2>
-                  <p className="text-sm text-slate-500">Historik för senaste körningar på {machineName}.</p>
+                  <h2>Recommendations</h2>
+                  <p className="text-sm text-slate-500">Rekommenderade uppdateringar och historik för {machineName}.</p>
                 </div>
 
                 <div className="overflow-x-auto">
@@ -469,31 +509,18 @@ export default function MachinePage({ params, searchParams }: MachinePageProps) 
               </section>
             )}
 
-            {activeTab === 'scheduling' && (
+            {activeTab === 'tutorials' && (
               <section className="machine-card space-y-4">
                 <div className="machine-section">
-                  <h2>Scheduling</h2>
-                  <p className="text-sm text-slate-500">Aktiva scheman för miljö {selectedEnv.toUpperCase()} som kan tillämpas på {machineName}.</p>
+                  <h2>Tutorials</h2>
+                  <p className="text-sm text-slate-500">Guider för patchning, schemaläggning och felsökning på individuell maskin.</p>
                 </div>
 
-                <div className="machine-schedule-list">
-                  {schedules.length > 0 ? (
-                    schedules.map((schedule) => (
-                      <article className="machine-schedule-item" key={schedule.id}>
-                        <div>
-                          <p className="font-semibold text-slate-800">{schedule.name}</p>
-                          <p className="text-xs text-slate-500">{weekdayLabel(schedule.day_of_week)} · {schedule.time_hhmm}</p>
-                        </div>
-                        <span className={schedule.enabled ? 'machine-state-ok' : 'machine-state-off'}>
-                          {schedule.enabled ? <FiCheckCircle className="inline mr-1" /> : <FiXCircle className="inline mr-1" />}
-                          {schedule.enabled ? 'Enabled' : 'Disabled'}
-                        </span>
-                      </article>
-                    ))
-                  ) : (
-                    <p className="text-sm text-slate-500">No schedules configured for this environment.</p>
-                  )}
-                </div>
+                <ul className="text-sm text-slate-700 list-disc pl-5 space-y-2">
+                  <li>Planera och köra en patchrunda för en singelserver.</li>
+                  <li>Bygg en playbook för ett kluster med rolling updates.</li>
+                  <li>Verifiera resultat via logs, insights och policy-status.</li>
+                </ul>
 
                 <section className="machine-announcement">
                   <p>You can manage schedules from the main dashboard. <a className="link" href={`/?env=${selectedEnv}&view=update-reports&basePath=${selectedBasePath}`}>Go to Update reports</a></p>
