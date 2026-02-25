@@ -9,7 +9,10 @@
       "published": "2026-02-19",
       "updated": "2026-02-20",
       "packages": 6,
-      "cves": ["CVE-2026-1301", "CVE-2026-1507"],
+      "cves": [
+        "CVE-2026-1301",
+        "CVE-2026-1507"
+      ],
       "rebootSuggested": true
     },
     {
@@ -21,7 +24,9 @@
       "published": "2026-02-21",
       "updated": "2026-02-21",
       "packages": 3,
-      "cves": ["CVE-2026-1123"],
+      "cves": [
+        "CVE-2026-1123"
+      ],
       "rebootSuggested": false
     },
     {
@@ -96,6 +101,29 @@
       "policy": "Reboot after kernel advisory",
       "status": "Compliant",
       "details": "Last reboot completed after previous kernel errata"
+    }
+  ],
+  "gpgKeyStatus": [
+    {
+      "keyId": "199E2F91FD431D51",
+      "source": "RHEL 9 BaseOS",
+      "fingerprint": "567E 347A D004 4ADE 55BA 8A5F 199E 2F91 FD43 1D51",
+      "expires": "2029-06-01",
+      "trust": "Trusted"
+    },
+    {
+      "keyId": "350D275DCD4F8A9A",
+      "source": "RHEL 9 AppStream",
+      "fingerprint": "B442 69D0 4F2A 6FD2 D600 82B0 350D 275D CD4F 8A9A",
+      "expires": "2029-06-01",
+      "trust": "Trusted"
+    },
+    {
+      "keyId": "A8A447DCE8562897",
+      "source": "EPEL 9",
+      "fingerprint": "FF8A D134 4597 106E CE81 D35A A8A4 47DC E856 2897",
+      "expires": "2027-12-15",
+      "trust": "Pending rotation"
     }
   ]
 }
