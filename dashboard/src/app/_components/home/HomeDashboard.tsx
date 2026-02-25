@@ -4,9 +4,8 @@ import { getFreeIPAConfigPath, getPlaybookRoutines } from '@/lib/config';
 import { getFreeIPAConfig } from '@/lib/freeipa';
 import { cookies } from 'next/headers';
 import { mergeInventories } from '@/lib/inventory';
-import { FiRefreshCw } from 'react-icons/fi';
+import { FiMonitor, FiRefreshCw, FiServer } from 'react-icons/fi';
 import ManagerSidebarNav, { isValidManagerNavKey } from '@/app/_components/layout/ManagerSidebarNav';
-import LinkTabs from '@/app/_components/ui/LinkTabs';
 import { AppButton, AppButtonLink } from '@/app/_components/ui/AppButton';
 import { buildPatchRoutineYaml } from '@/app/_lib/playbook-routine';
 
@@ -32,8 +31,6 @@ type ScheduleRow = {
   time_hhmm: string;
   enabled: number;
 };
-
-type OverviewTabKey = 'fleet' | 'automation' | 'platforms' | 'operations';
 
 type ServiceAccountRow = {
   id: number;
@@ -100,7 +97,6 @@ type DashboardSearchParams = {
   routineSerial?: string;
   elSecurityOnly?: string;
   routineTemplate?: string;
-  overviewTab?: string;
 };
 
 
@@ -119,9 +115,6 @@ export default function HomePage({ searchParams }: { searchParams?: DashboardSea
   const selectedDistribution = searchParams?.distribution || 'all';
   const selectedPlatform = searchParams?.platform || 'all';
   const selectedCluster = searchParams?.cluster || 'all';
-  const overviewTab: OverviewTabKey = ['fleet', 'automation', 'platforms', 'operations'].includes(searchParams?.overviewTab || '')
-    ? (searchParams?.overviewTab as OverviewTabKey)
-    : 'fleet';
 
   const runs = db.prepare('SELECT * FROM runs ORDER BY id DESC LIMIT 50').all() as RunRow[];
   const schedules = db.prepare('SELECT id,name,env,day_of_week,time_hhmm,enabled FROM schedules ORDER BY id DESC').all() as ScheduleRow[];
@@ -252,33 +245,23 @@ export default function HomePage({ searchParams }: { searchParams?: DashboardSea
             </div>
           </section>
 
-          <section className="tabs-row">
-            <span className="tab active">Overseer Infrastructure Manager</span>
-            <span className="tab">Environment: {selectedEnv.toUpperCase()}</span>
-            <span className="tab">Inventory: {inventory.inventory_path}</span>
-            <span className="tab">Source: {inventory.source ?? 'ansible'}</span>
-          </section>
-
           <section className="content-area space-y-5">
-            <div>
-              <h2 className="text-xl font-semibold">Environment overview</h2>
-              <p className="mt-1 text-sm text-slate-500">Läser från {selectedBasePath}/{selectedEnv}/inventory via Python-integration.</p>
-              {inventory.error && <p className="mt-2 text-sm text-rose-700">Inventory-fel: {inventory.error}</p>}
-              {inventoryByEnv.some((item) => item.source === 'fixture') && <p className="mt-2 text-sm text-amber-700">Visar fejkdata från JSON-fixtures för snabb UI-test.</p>}
-            </div>
+            <section className="table-card">
+              <div className="table-head flex flex-wrap items-center gap-2">
+                <h2>Environment overview</h2>
+                <span className="chip">Environment: {selectedEnv.toUpperCase()}</span>
+                <span className="chip">Inventory: {inventory.inventory_path}</span>
+                <span className="chip">Source: {inventory.source ?? 'ansible'}</span>
+              </div>
+              <div className="p-4 text-sm text-slate-500 space-y-2">
+                <p>Läser från {selectedBasePath}/{selectedEnv}/inventory via Python-integration.</p>
+                {inventory.error && <p className="text-rose-700">Inventory-fel: {inventory.error}</p>}
+                {inventoryByEnv.some((item) => item.source === 'fixture') && <p className="text-amber-700">Visar fejkdata från JSON-fixtures för snabb UI-test.</p>}
+              </div>
+            </section>
 
             {activeView === 'overview' && (
               <>
-                <LinkTabs
-                  activeKey={overviewTab}
-                  tabs={[
-                    { key: 'fleet', label: 'Fleet status', href: `/?env=${selectedEnv}&view=overview&overviewTab=fleet&basePath=${selectedBasePath}` },
-                    { key: 'automation', label: 'Automation', href: `/?env=${selectedEnv}&view=overview&overviewTab=automation&basePath=${selectedBasePath}` },
-                    { key: 'platforms', label: 'Platform coverage', href: `/?env=${selectedEnv}&view=overview&overviewTab=platforms&basePath=${selectedBasePath}` },
-                    { key: 'operations', label: 'Operations backlog', href: `/?env=${selectedEnv}&view=overview&overviewTab=operations&basePath=${selectedBasePath}` },
-                  ]}
-                />
-
                 <div className="kpi-grid">
                   <article className="kpi-card"><p className="kpi-title">Managed nodes</p><p className="kpi-value">{inventory.server_count}</p></article>
                   <article className="kpi-card"><p className="kpi-title">Linux / Unix / FreeBSD</p><p className="kpi-value">{linuxCount} / {unixCount} / {freebsdCount}</p></article>
@@ -289,42 +272,14 @@ export default function HomePage({ searchParams }: { searchParams?: DashboardSea
 
                 <section className="panel-grid">
                   <article className="panel-card">
-                    <div className="panel-head"><h2>{overviewTab === 'fleet' ? 'Fleet health' : overviewTab === 'automation' ? 'Automation readiness' : overviewTab === 'platforms' ? 'Platform distribution' : 'Operational posture'}</h2></div>
+                    <div className="panel-head"><h2>Fleet health</h2></div>
                     <div className="status-layout">
                       <div className="donut-wrap"><div className="donut" style={donutStyle}><div className="donut-inner"><strong>{inventory.server_count}</strong><span>Machines</span></div></div></div>
                       <div className="stat-list">
-                        {overviewTab === 'fleet' && (
-                          <>
-                            <p><span>Healthy recent runs</span><strong>{completedRuns}</strong></p>
-                            <p><span>Queued/running</span><strong>{pendingRuns}</strong></p>
-                            <p><span>Failed</span><strong>{failedRuns}</strong></p>
-                            <p><span>Compliance rate</span><strong>{pct(totals.ok, totals.targets)}%</strong></p>
-                          </>
-                        )}
-                        {overviewTab === 'automation' && (
-                          <>
-                            <p><span>With periodic assessment</span><strong>{withAssessmentCount}</strong></p>
-                            <p><span>Connected to schedule</span><strong>{managedBySchedules}</strong></p>
-                            <p><span>Available schedules</span><strong>{envSchedules.length}</strong></p>
-                            <p><span>Playbook routines</span><strong>{playbookRoutines.length}</strong></p>
-                          </>
-                        )}
-                        {overviewTab === 'platforms' && (
-                          <>
-                            <p><span>Linux hosts</span><strong>{linuxCount}</strong></p>
-                            <p><span>Unix hosts</span><strong>{unixCount}</strong></p>
-                            <p><span>FreeBSD hosts</span><strong>{freebsdCount}</strong></p>
-                            <p><span>Distinct distributions</span><strong>{distributionOptions.length - 1}</strong></p>
-                          </>
-                        )}
-                        {overviewTab === 'operations' && (
-                          <>
-                            <p><span>Pending jobs</span><strong>{pendingRuns}</strong></p>
-                            <p><span>Nodes missing assessment</span><strong>{machineRows.length - withAssessmentCount}</strong></p>
-                            <p><span>Nodes without schedule</span><strong>{machineRows.length - managedBySchedules}</strong></p>
-                            <p><span>Failure ratio</span><strong>{pct(failedRuns, Math.max(envRuns.length, 1))}%</strong></p>
-                          </>
-                        )}
+                        <p><span>Healthy recent runs</span><strong>{completedRuns}</strong></p>
+                        <p><span>Queued/running</span><strong>{pendingRuns}</strong></p>
+                        <p><span>Failed</span><strong>{failedRuns}</strong></p>
+                        <p><span>Compliance rate</span><strong>{pct(totals.ok, totals.targets)}%</strong></p>
                       </div>
                     </div>
                   </article>
