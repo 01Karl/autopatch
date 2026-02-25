@@ -1,4 +1,6 @@
 import { loadInventorySummary } from '@/lib/inventory';
+import logsData from '@/mock-data/machines/logs.json';
+import securityData from '@/mock-data/machines/security.json';
 
 export const ENV_OPTIONS = ['prod', 'qa', 'dev'] as const;
 export const DEFAULT_BASE_PATH = 'environments';
@@ -7,6 +9,8 @@ export type MachineSection =
   | 'overview'
   | 'updates'
   | 'security'
+  | 'repository-trust'
+  | 'logs'
   | 'advisor-recommendations'
   | 'extensions'
   | 'continuous-delivery'
@@ -83,11 +87,7 @@ export const updates = [
   { name: 'Container runtime update', classification: 'Security', severity: 'Moderate', kb: 'LSA-2026-028', reboot: 'No reboot', published: '2026-02-02 07:50' }
 ];
 
-export const errata = [
-  { id: 'RLSA-2026:0018', type: 'Security', severity: 'Important', installable: 'Yes', synopsis: 'Kernel security update', published: '2026-01-18' },
-  { id: 'RLSA-2026:0022', type: 'Security', severity: 'Moderate', installable: 'Yes', synopsis: 'OpenSSL vulnerability fix', published: '2026-01-20' },
-  { id: 'RLEA-2026:0004', type: 'Bugfix', severity: 'Low', installable: 'Yes', synopsis: 'Container runtime stability update', published: '2026-02-02' }
-];
+export const errata = securityData.errata;
 
 export const moduleStreams = [
   { name: 'nodejs:20', status: 'Enabled', repoSet: 'rhel-9-appstream-rpms', profile: 'common', packages: 13 },
@@ -101,17 +101,19 @@ export const repositorySets = [
   { name: 'epel-9', state: 'Disabled', source: 'External mirror', contentType: 'RPM', lastSync: '2026-01-30 05:12' }
 ];
 
-export const securityFindings = [
-  { cve: 'CVE-2026-1123', package: 'openssl', severity: 'High', status: 'Open', action: 'Patch with LSA-2026-017' },
-  { cve: 'CVE-2026-1301', package: 'kernel', severity: 'Critical', status: 'Mitigated in staging', action: 'Promote tested kernel rollout' },
-  { cve: 'CVE-2026-1440', package: 'containerd', severity: 'Medium', status: 'Open', action: 'Schedule during maintenance window' }
-];
+export const securityFindings = securityData.securityFindings;
 
-export const policyChecks = [
-  { policy: 'Critical patches within 7 days', status: 'At risk', details: '1 patch is older than SLA' },
-  { policy: 'No unsupported repositories', status: 'Compliant', details: 'Only approved repositories active' },
-  { policy: 'Reboot after kernel update', status: 'Compliant', details: 'Last kernel reboot completed' }
-];
+export const policyChecks = securityData.policyChecks;
+
+export const gpgKeyStatus = securityData.gpgKeyStatus;
+
+export type LinuxLogCategory = 'system' | 'security' | 'services' | 'network' | 'access';
+
+export const linuxLogCategories = logsData.linuxLogCategories;
+
+export const linuxLogFiles = logsData.linuxLogFiles;
+
+export const logInsights = logsData.logInsights;
 
 export const advisorHighlights = [
   'Enable automatic CVE triage for critical vulnerabilities.',
