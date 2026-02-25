@@ -1,5 +1,5 @@
 import type { IconType } from 'react-icons';
-import { FiBarChart2, FiClock, FiCpu, FiHome, FiMapPin, FiMonitor, FiPlayCircle, FiRefreshCw, FiServer, FiShield, FiUsers } from 'react-icons/fi';
+import { FiBarChart2, FiClock, FiCpu, FiGrid, FiHome, FiList, FiMapPin, FiMonitor, FiPlayCircle, FiRefreshCw, FiServer, FiShield, FiUsers } from 'react-icons/fi';
 import { getMockMachines, MachineEnv } from '@/lib/machines';
 
 type SearchParams = {
@@ -7,9 +7,11 @@ type SearchParams = {
   criticality?: string;
   compliance?: string;
   cols?: string | string[];
+  view?: 'list' | 'grid';
 };
 
 type NavKey = 'overview' | 'get-started' | 'playbooks' | 'machines' | 'history' | 'update-reports';
+type ViewMode = 'list' | 'grid';
 
 type NavItem = {
   key: NavKey;
@@ -77,7 +79,6 @@ function getComplianceStyle(compliance: string): string {
 
 function getSelectedColumns(cols?: string | string[]): ColumnKey[] {
   const allColumns = COLUMN_OPTIONS.map((col) => col.key);
-
   if (!cols) return allColumns;
 
   const values = Array.isArray(cols)
@@ -94,12 +95,17 @@ function getSelectedColumns(cols?: string | string[]): ColumnKey[] {
   return validColumns.length > 0 ? validColumns : allColumns;
 }
 
+function getViewMode(view?: string): ViewMode {
+  return view === 'grid' ? 'grid' : 'list';
+}
+
 export default function MachinesPage({ searchParams }: { searchParams?: SearchParams }) {
   const selectedEnv = ENV_OPTIONS.includes(searchParams?.env as 'all' | MachineEnv) ? (searchParams?.env as 'all' | MachineEnv) : 'prod';
   const selectedCriticality = searchParams?.criticality || 'all';
   const selectedCompliance = searchParams?.compliance || 'all';
   const selectedColumns = getSelectedColumns(searchParams?.cols);
   const selectedColumnSet = new Set(selectedColumns);
+  const selectedView = getViewMode(searchParams?.view);
 
   const machines = getMockMachines(selectedEnv);
   const filtered = machines.filter((machine) => {
@@ -113,6 +119,18 @@ export default function MachinesPage({ searchParams }: { searchParams?: SearchPa
 
   const criticalityOptions = ['all', ...new Set(machines.map((m) => m.metadata.criticality))];
   const complianceOptions = ['all', ...new Set(machines.map((m) => m.metadata.compliance))];
+
+  const baseParams = new URLSearchParams({
+    env: selectedEnv,
+    criticality: selectedCriticality,
+    compliance: selectedCompliance
+  });
+  selectedColumns.forEach((column) => baseParams.append('cols', column));
+
+  const listParams = new URLSearchParams(baseParams);
+  listParams.set('view', 'list');
+  const gridParams = new URLSearchParams(baseParams);
+  gridParams.set('view', 'grid');
 
   return (
     <main className="azure-shell">
@@ -145,14 +163,10 @@ export default function MachinesPage({ searchParams }: { searchParams?: SearchPa
                 if (!item) return null;
                 const NavIcon = item.icon;
                 const itemHref = item.key === 'machines'
-                  ? `/machines?env=${selectedEnv}`
+                  ? `/machines?${baseParams.toString()}`
                   : `/?env=${selectedEnv}&view=${item.key}&basePath=environments`;
                 return (
-                  <a
-                    key={item.key}
-                    href={itemHref}
-                    className={`side-link ${item.key === 'machines' ? 'active' : ''}`}
-                  >
+                  <a key={item.key} href={itemHref} className={`side-link ${item.key === 'machines' ? 'active' : ''}`}>
                     <span className="side-icon"><NavIcon /></span>
                     <span>{item.label}</span>
                   </a>
@@ -181,7 +195,17 @@ export default function MachinesPage({ searchParams }: { searchParams?: SearchPa
             </div>
 
             <section className="table-card">
-              <div className="table-head"><h2>Machine inventory</h2></div>
+              <div className="table-head flex items-center justify-between gap-3">
+                <h2>Machine inventory</h2>
+                <div className="inline-flex items-center rounded-md border border-slate-300 bg-white p-1">
+                  <a href={`/machines?${listParams.toString()}`} className={`inline-flex items-center gap-1 rounded px-2 py-1 text-xs ${selectedView === 'list' ? 'bg-slate-800 text-white' : 'text-slate-600'}`}>
+                    <FiList /> List
+                  </a>
+                  <a href={`/machines?${gridParams.toString()}`} className={`inline-flex items-center gap-1 rounded px-2 py-1 text-xs ${selectedView === 'grid' ? 'bg-slate-800 text-white' : 'text-slate-600'}`}>
+                    <FiGrid /> Grid
+                  </a>
+                </div>
+              </div>
 
               <form className="grid gap-3 md:grid-cols-2 xl:grid-cols-4 p-4 border-b border-slate-200" method="get">
                 <label className="text-xs text-slate-500">Environment
@@ -199,74 +223,86 @@ export default function MachinesPage({ searchParams }: { searchParams?: SearchPa
                     {complianceOptions.map((value) => (<option key={value} value={value}>{value === 'all' ? 'All states' : value}</option>))}
                   </select>
                 </label>
-                <div className="flex gap-2 items-end">
+                <div className="flex flex-wrap gap-2 items-end">
                   <button className="primary-btn" type="submit">Apply</button>
                   <a className="ghost-btn" href={`/machines?env=${selectedEnv}`}>Reset</a>
+                  <label htmlFor="column-drawer-toggle" className="ghost-btn cursor-pointer">Edit columns</label>
                 </div>
                 {selectedColumns.map((column) => (
                   <input key={column} type="hidden" name="cols" value={column} />
                 ))}
+                <input type="hidden" name="view" value={selectedView} />
               </form>
 
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr>
-                      {selectedColumnSet.has('hostname') && <th>Hostname</th>}
-                      {selectedColumnSet.has('env') && <th>Env</th>}
-                      {selectedColumnSet.has('cluster') && <th>Cluster</th>}
-                      {selectedColumnSet.has('uuid') && <th>UUID</th>}
-                      {selectedColumnSet.has('role') && <th>Role</th>}
-                      {selectedColumnSet.has('owner') && <th>Owner</th>}
-                      {selectedColumnSet.has('location') && <th>Location</th>}
-                      {selectedColumnSet.has('criticality') && <th>Criticality</th>}
-                      {selectedColumnSet.has('compliance') && <th>Compliance</th>}
-                      {selectedColumnSet.has('osVersion') && <th>OS</th>}
-                      {selectedColumnSet.has('patchWindow') && <th>Patch window</th>}
-                      {selectedColumnSet.has('lastSeen') && <th>Last seen</th>}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filtered.map((machine) => (
-                      <tr key={`${machine.env}-${machine.hostname}`}>
-                        {selectedColumnSet.has('hostname') && (
-                          <td>
-                            <a className="link font-medium" href={`/machines/${encodeURIComponent(machine.hostname)}/overview?env=${machine.env}&basePath=environments`}>{machine.hostname}</a>
-                          </td>
-                        )}
-                        {selectedColumnSet.has('env') && <td>{machine.env.toUpperCase()}</td>}
-                        {selectedColumnSet.has('cluster') && <td>{machine.cluster}</td>}
-                        {selectedColumnSet.has('uuid') && <td className="font-mono text-xs text-slate-600">{machine.metadata.uuid}</td>}
-                        {selectedColumnSet.has('role') && <td><span className="inline-flex items-center gap-1"><FiCpu /> {machine.metadata.role}</span></td>}
-                        {selectedColumnSet.has('owner') && <td><span className="inline-flex items-center gap-1"><FiUsers /> {machine.metadata.owner}</span></td>}
-                        {selectedColumnSet.has('location') && <td><span className="inline-flex items-center gap-1"><FiMapPin /> {machine.metadata.location}</span></td>}
-                        {selectedColumnSet.has('criticality') && <td>{machine.metadata.criticality}</td>}
-                        {selectedColumnSet.has('compliance') && (
-                          <td>
-                            <span className={`inline-flex items-center gap-1 ${getComplianceStyle(machine.metadata.compliance)}`}>
-                              <FiShield /> {machine.metadata.compliance}
-                            </span>
-                          </td>
-                        )}
-                        {selectedColumnSet.has('osVersion') && <td>{machine.metadata.osVersion}</td>}
-                        {selectedColumnSet.has('patchWindow') && <td>{machine.metadata.patchWindow}</td>}
-                        {selectedColumnSet.has('lastSeen') && <td>{machine.metadata.lastSeen}</td>}
+              {selectedView === 'list' ? (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr>
+                        {selectedColumnSet.has('hostname') && <th>Hostname</th>}
+                        {selectedColumnSet.has('env') && <th>Env</th>}
+                        {selectedColumnSet.has('cluster') && <th>Cluster</th>}
+                        {selectedColumnSet.has('uuid') && <th>UUID</th>}
+                        {selectedColumnSet.has('role') && <th>Role</th>}
+                        {selectedColumnSet.has('owner') && <th>Owner</th>}
+                        {selectedColumnSet.has('location') && <th>Location</th>}
+                        {selectedColumnSet.has('criticality') && <th>Criticality</th>}
+                        {selectedColumnSet.has('compliance') && <th>Compliance</th>}
+                        {selectedColumnSet.has('osVersion') && <th>OS</th>}
+                        {selectedColumnSet.has('patchWindow') && <th>Patch window</th>}
+                        {selectedColumnSet.has('lastSeen') && <th>Last seen</th>}
                       </tr>
-                    ))}
-                    {filtered.length === 0 && <tr><td colSpan={selectedColumns.length} className="text-slate-500">No machines found for selected filters.</td></tr>}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody>
+                      {filtered.map((machine) => (
+                        <tr key={`${machine.env}-${machine.hostname}`}>
+                          {selectedColumnSet.has('hostname') && <td><a className="link font-medium" href={`/machines/${encodeURIComponent(machine.hostname)}/overview?env=${machine.env}&basePath=environments`}>{machine.hostname}</a></td>}
+                          {selectedColumnSet.has('env') && <td>{machine.env.toUpperCase()}</td>}
+                          {selectedColumnSet.has('cluster') && <td>{machine.cluster}</td>}
+                          {selectedColumnSet.has('uuid') && <td className="font-mono text-xs text-slate-600">{machine.metadata.uuid}</td>}
+                          {selectedColumnSet.has('role') && <td><span className="inline-flex items-center gap-1"><FiCpu /> {machine.metadata.role}</span></td>}
+                          {selectedColumnSet.has('owner') && <td><span className="inline-flex items-center gap-1"><FiUsers /> {machine.metadata.owner}</span></td>}
+                          {selectedColumnSet.has('location') && <td><span className="inline-flex items-center gap-1"><FiMapPin /> {machine.metadata.location}</span></td>}
+                          {selectedColumnSet.has('criticality') && <td>{machine.metadata.criticality}</td>}
+                          {selectedColumnSet.has('compliance') && <td><span className={`inline-flex items-center gap-1 ${getComplianceStyle(machine.metadata.compliance)}`}><FiShield /> {machine.metadata.compliance}</span></td>}
+                          {selectedColumnSet.has('osVersion') && <td>{machine.metadata.osVersion}</td>}
+                          {selectedColumnSet.has('patchWindow') && <td>{machine.metadata.patchWindow}</td>}
+                          {selectedColumnSet.has('lastSeen') && <td>{machine.metadata.lastSeen}</td>}
+                        </tr>
+                      ))}
+                      {filtered.length === 0 && <tr><td colSpan={selectedColumns.length} className="text-slate-500">No machines found for selected filters.</td></tr>}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="grid gap-3 p-4 md:grid-cols-2 xl:grid-cols-3">
+                  {filtered.map((machine) => (
+                    <article key={`${machine.env}-${machine.hostname}`} className="rounded-lg border border-slate-200 bg-white p-4 text-sm shadow-sm">
+                      <a className="link text-base font-semibold" href={`/machines/${encodeURIComponent(machine.hostname)}/overview?env=${machine.env}&basePath=environments`}>{machine.hostname}</a>
+                      <dl className="mt-3 space-y-1">
+                        {selectedColumnSet.has('env') && <div className="flex justify-between gap-2"><dt className="text-slate-500">Env</dt><dd>{machine.env.toUpperCase()}</dd></div>}
+                        {selectedColumnSet.has('cluster') && <div className="flex justify-between gap-2"><dt className="text-slate-500">Cluster</dt><dd>{machine.cluster}</dd></div>}
+                        {selectedColumnSet.has('uuid') && <div className="flex justify-between gap-2"><dt className="text-slate-500">UUID</dt><dd className="font-mono text-xs text-slate-600">{machine.metadata.uuid}</dd></div>}
+                        {selectedColumnSet.has('role') && <div className="flex justify-between gap-2"><dt className="text-slate-500">Role</dt><dd>{machine.metadata.role}</dd></div>}
+                        {selectedColumnSet.has('owner') && <div className="flex justify-between gap-2"><dt className="text-slate-500">Owner</dt><dd>{machine.metadata.owner}</dd></div>}
+                        {selectedColumnSet.has('location') && <div className="flex justify-between gap-2"><dt className="text-slate-500">Location</dt><dd>{machine.metadata.location}</dd></div>}
+                        {selectedColumnSet.has('criticality') && <div className="flex justify-between gap-2"><dt className="text-slate-500">Criticality</dt><dd>{machine.metadata.criticality}</dd></div>}
+                        {selectedColumnSet.has('compliance') && <div className="flex justify-between gap-2"><dt className="text-slate-500">Compliance</dt><dd className={getComplianceStyle(machine.metadata.compliance)}>{machine.metadata.compliance}</dd></div>}
+                        {selectedColumnSet.has('osVersion') && <div className="flex justify-between gap-2"><dt className="text-slate-500">OS</dt><dd>{machine.metadata.osVersion}</dd></div>}
+                        {selectedColumnSet.has('patchWindow') && <div className="flex justify-between gap-2"><dt className="text-slate-500">Patch window</dt><dd>{machine.metadata.patchWindow}</dd></div>}
+                        {selectedColumnSet.has('lastSeen') && <div className="flex justify-between gap-2"><dt className="text-slate-500">Last seen</dt><dd>{machine.metadata.lastSeen}</dd></div>}
+                      </dl>
+                    </article>
+                  ))}
+                  {filtered.length === 0 && <p className="text-slate-500">No machines found for selected filters.</p>}
+                </div>
+              )}
             </section>
           </section>
         </section>
       </div>
 
-      <label
-        htmlFor="column-drawer-toggle"
-        className="fixed inset-0 z-40 bg-slate-900/35 opacity-0 pointer-events-none transition-opacity peer-checked:opacity-100 peer-checked:pointer-events-auto"
-        aria-label="Close column settings"
-      />
+      <label htmlFor="column-drawer-toggle" className="fixed inset-0 z-40 bg-slate-900/35 opacity-0 pointer-events-none transition-opacity peer-checked:opacity-100 peer-checked:pointer-events-auto" aria-label="Close column settings" />
 
       <aside className="fixed right-0 top-0 z-50 h-full w-full max-w-sm translate-x-full bg-white shadow-2xl transition-transform duration-300 peer-checked:translate-x-0">
         <div className="flex items-center justify-between border-b border-slate-200 p-4">
@@ -288,11 +324,12 @@ export default function MachinesPage({ searchParams }: { searchParams?: SearchPa
             <input type="hidden" name="env" value={selectedEnv} />
             <input type="hidden" name="criticality" value={selectedCriticality} />
             <input type="hidden" name="compliance" value={selectedCompliance} />
+            <input type="hidden" name="view" value={selectedView} />
           </div>
 
           <div className="flex items-center gap-2 border-t border-slate-200 p-4">
             <button type="submit" className="primary-btn">Save columns</button>
-            <a className="ghost-btn" href={`/machines?env=${selectedEnv}&criticality=${selectedCriticality}&compliance=${selectedCompliance}`}>Reset columns</a>
+            <a className="ghost-btn" href={`/machines?env=${selectedEnv}&criticality=${selectedCriticality}&compliance=${selectedCompliance}&view=${selectedView}`}>Reset columns</a>
           </div>
         </form>
       </aside>
