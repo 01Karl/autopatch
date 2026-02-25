@@ -28,20 +28,31 @@ function pct(ok: number, total: number) {
 
 function weekdayLabel(day: string) {
   const map: Record<string, string> = {
-    mon: 'Mån',
-    tue: 'Tis',
-    wed: 'Ons',
-    thu: 'Tor',
-    fri: 'Fre',
-    sat: 'Lör',
-    sun: 'Sön',
+    mon: 'Måndag',
+    tue: 'Tisdag',
+    wed: 'Onsdag',
+    thu: 'Torsdag',
+    fri: 'Fredag',
+    sat: 'Lördag',
+    sun: 'Söndag',
   };
   return map[day] ?? day;
 }
 
+function statusLabel(status: string) {
+  const map: Record<string, string> = {
+    completed: 'Completed',
+    failed: 'Failed',
+    running: 'Running',
+    queued: 'Pending',
+  };
+  return map[status] ?? status;
+}
+
 export default function HomePage() {
-  const runs = db.prepare('SELECT * FROM runs ORDER BY id DESC LIMIT 30').all() as RunRow[];
+  const runs = db.prepare('SELECT * FROM runs ORDER BY id DESC LIMIT 50').all() as RunRow[];
   const schedules = db.prepare('SELECT * FROM schedules ORDER BY id DESC').all() as ScheduleRow[];
+  const latestRun = runs[0];
 
   const totals = runs.reduce(
     (acc, run) => {
@@ -56,169 +67,136 @@ export default function HomePage() {
 
   const completedRuns = runs.filter((run) => run.status === 'completed').length;
   const failedRuns = runs.filter((run) => run.status === 'failed').length;
+  const pendingRuns = runs.filter((run) => run.status === 'queued' || run.status === 'running').length;
   const activeSchedules = schedules.filter((schedule) => Boolean(schedule.enabled)).length;
-  const latestRun = runs[0];
 
-  const recentRuns = [...runs].reverse();
-  const exportRows = runs.map((run) => ({
-    id: run.id,
-    started_at: run.started_at,
-    env: run.env,
-    status: run.status,
-    ok_count: run.ok_count,
-    failed_count: run.failed_count,
-    skipped_count: run.skipped_count,
-    total_targets: run.total_targets,
-    success_pct: run.success_pct,
-  }));
-  const csv = [
-    Object.keys(exportRows[0] ?? { id: '', started_at: '', env: '', status: '', ok_count: '', failed_count: '', skipped_count: '', total_targets: '', success_pct: '' }).join(','),
-    ...exportRows.map((row) => Object.values(row).join(',')),
-  ].join('\n');
-  const csvHref = `data:text/csv;charset=utf-8,${encodeURIComponent(csv)}`;
+  const csvHeader = 'id,started_at,env,status,ok_count,failed_count,skipped_count,total_targets,success_pct';
+  const csvRows = runs.map((run) => [run.id, run.started_at, run.env, run.status, run.ok_count, run.failed_count, run.skipped_count, run.total_targets, run.success_pct].join(','));
+  const csvHref = `data:text/csv;charset=utf-8,${encodeURIComponent([csvHeader, ...csvRows].join('\n'))}`;
+
+  const successShare = totals.targets ? (totals.ok / totals.targets) * 100 : 0;
+  const failedShare = totals.targets ? (totals.failed / totals.targets) * 100 : 0;
+  const donutStyle = {
+    background: `conic-gradient(#2563eb 0 ${successShare}%, #dc2626 ${successShare}% ${successShare + failedShare}%, #f59e0b ${successShare + failedShare}% 100%)`,
+  };
 
   return (
-    <main className="mx-auto max-w-7xl p-6 space-y-6">
-      <header className="hero-card">
+    <main className="azure-shell">
+      <section className="command-bar">
+        <div className="command-left">
+          <button className="ghost-btn" type="button">← Leave new experience</button>
+          <button className="ghost-btn" type="button">↻ Refresh</button>
+          <button className="ghost-btn" type="button">⚙ Update settings</button>
+        </div>
+        <div className="command-right">
+          <a className="ghost-btn" href={csvHref} download="autopatch-runs.csv">Export CSV</a>
+          {latestRun?.report_xlsx && <a className="ghost-btn" href={`/${latestRun.report_xlsx}`}>Export Excel</a>}
+        </div>
+      </section>
+
+      <section className="tabs-row">
+        <span className="tab active">Recommended updates</span>
+        <span className="tab">Update history</span>
+        <span className="tab">Scheduling</span>
+      </section>
+
+      <section className="content-area space-y-5">
         <div>
-          <p className="text-sm font-medium text-blue-700">Operations center</p>
-          <h1 className="mt-1 text-3xl font-semibold tracking-tight">Autopatch Dashboard</h1>
-          <p className="mt-2 text-sm text-slate-600">Modern överblick av patch-status, scheman och rapporter på ett ställe.</p>
+          <h1 className="text-2xl font-semibold">Infrastructure (host) updates</h1>
+          <p className="mt-1 text-sm text-slate-500">Patch-översikt för miljöer, körningar och schemaorkestrering.</p>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <a className="btn" href={csvHref} download="autopatch-runs.csv">Exportera historik (CSV)</a>
-          {latestRun?.report_xlsx && (
-            <a className="btn btn-secondary" href={`/${latestRun.report_xlsx}`}>Ladda ner senaste Excel</a>
-          )}
+
+        <div className="kpi-grid">
+          <article className="kpi-card"><p className="kpi-title">Total updates</p><p className="kpi-value">{totals.targets}</p></article>
+          <article className="kpi-card"><p className="kpi-title">Critical updates</p><p className="kpi-value text-amber-600">{totals.failed}</p></article>
+          <article className="kpi-card"><p className="kpi-title">Security updates</p><p className="kpi-value text-blue-700">{totals.ok}</p></article>
+          <article className="kpi-card"><p className="kpi-title">Other updates</p><p className="kpi-value">{totals.skipped}</p></article>
+          <article className="kpi-card"><p className="kpi-title">Active schedules</p><p className="kpi-value">{activeSchedules}</p></article>
         </div>
-      </header>
 
-      <section className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-6 gap-4">
-        <div className="card stat-card"><p className="stat-label">Success %</p><p className="stat-value">{pct(totals.ok, totals.targets)}%</p></div>
-        <div className="card stat-card"><p className="stat-label">Totalt targets</p><p className="stat-value">{totals.targets}</p></div>
-        <div className="card stat-card"><p className="stat-label">OK</p><p className="stat-value">{totals.ok}</p></div>
-        <div className="card stat-card"><p className="stat-label">Failed</p><p className="stat-value">{totals.failed}</p></div>
-        <div className="card stat-card"><p className="stat-label">Körningar (30)</p><p className="stat-value">{runs.length}</p><p className="stat-sub">Klara: {completedRuns} • Misslyckade: {failedRuns}</p></div>
-        <div className="card stat-card"><p className="stat-label">Aktiva scheman</p><p className="stat-value">{activeSchedules}</p><p className="stat-sub">Totalt: {schedules.length}</p></div>
-      </section>
-
-      <section className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-        <div className="card space-y-4">
-          <h2 className="font-semibold">Resultattrend (senaste 30 körningar)</h2>
-          <div className="space-y-2">
-            {recentRuns.length === 0 && <p className="text-sm text-slate-500">Ingen körhistorik än.</p>}
-            {recentRuns.map((run) => {
-              const value = Math.max(0, Math.min(100, Number(run.success_pct) || 0));
-              return (
-                <div key={run.id}>
-                  <div className="mb-1 flex items-center justify-between text-xs text-slate-500">
-                    <span>#{run.id} • {run.env}</span>
-                    <span>{value.toFixed(1)}%</span>
-                  </div>
-                  <div className="h-2 w-full rounded-full bg-slate-200">
-                    <div className="h-2 rounded-full bg-blue-600" style={{ width: `${value}%` }} />
+        <div className="panel-grid">
+          <article className="panel-card">
+            <div className="panel-head">
+              <h2>Update status of machines</h2>
+              <span className="chip">Last 50 runs</span>
+            </div>
+            <div className="status-layout">
+              <div className="donut-wrap">
+                <div className="donut" style={donutStyle}>
+                  <div className="donut-inner">
+                    <strong>{runs.length}</strong>
+                    <span>Runs</span>
                   </div>
                 </div>
-              );
-            })}
-          </div>
-        </div>
+              </div>
+              <div className="stat-list">
+                <p><span>Pending updates</span><strong>{pendingRuns}</strong></p>
+                <p><span>No pending updates</span><strong>{completedRuns}</strong></p>
+                <p><span>Failed</span><strong>{failedRuns}</strong></p>
+                <p><span>Compliance rate</span><strong>{pct(totals.ok, totals.targets)}%</strong></p>
+              </div>
+            </div>
+          </article>
 
-        <div className="card space-y-4">
-          <h2 className="font-semibold">Fördelning targets</h2>
-          <div className="grid gap-3">
-            {[
-              { label: 'OK', value: totals.ok, color: 'bg-emerald-500' },
-              { label: 'Failed', value: totals.failed, color: 'bg-rose-500' },
-              { label: 'Skipped', value: totals.skipped, color: 'bg-amber-500' },
-            ].map((item) => {
-              const share = totals.targets ? (item.value / totals.targets) * 100 : 0;
-              return (
-                <div key={item.label}>
-                  <div className="mb-1 flex items-center justify-between text-sm">
-                    <span>{item.label}</span>
-                    <span className="text-slate-500">{item.value} ({share.toFixed(1)}%)</span>
+          <article className="panel-card">
+            <div className="panel-head">
+              <h2>Patch orchestration</h2>
+              <span className="chip">Schedules</span>
+            </div>
+            <div className="space-y-3">
+              {schedules.slice(0, 6).map((schedule) => (
+                <div className="schedule-row" key={schedule.id}>
+                  <div>
+                    <p className="font-medium">{schedule.name}</p>
+                    <p className="text-xs text-slate-500">{weekdayLabel(schedule.day_of_week)} {schedule.time_hhmm}</p>
                   </div>
-                  <div className="h-3 w-full rounded-full bg-slate-200">
-                    <div className={`h-3 rounded-full ${item.color}`} style={{ width: `${share}%` }} />
-                  </div>
+                  <span className={`pill ${schedule.enabled ? 'pill-on' : 'pill-off'}`}>{schedule.enabled ? 'Enabled' : 'Disabled'}</span>
                 </div>
-              );
-            })}
+              ))}
+              {schedules.length === 0 && <p className="text-sm text-slate-500">Inga scheman skapade ännu.</p>}
+            </div>
+          </article>
+        </div>
+
+        <section className="table-card">
+          <div className="table-head">
+            <h2>Update runs</h2>
+            <div className="chips">
+              <span className="chip">Environment: All</span>
+              <span className="chip">Status: All</span>
+              <span className="chip">Reboot required: All</span>
+            </div>
           </div>
-        </div>
-      </section>
-
-      <section className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-        <div className="card space-y-3">
-          <h2 className="font-semibold">Kör autopatch manuellt</h2>
-          <form action="/api/runs/manual" method="post" className="grid gap-2">
-            <input className="input" name="env" placeholder="env" defaultValue="qa" />
-            <input className="input" name="basePath" placeholder="base path" defaultValue="../../../Ansible/environments" />
-            <label className="text-sm"><input type="checkbox" name="dryRun" value="1" className="mr-2" />Dry-run</label>
-            <input className="input" name="maxWorkers" type="number" defaultValue="2" />
-            <input className="input" name="probeTimeout" type="number" step="0.5" defaultValue="5" />
-            <button className="btn" type="submit">Starta körning</button>
-          </form>
-
-          <h2 className="font-semibold pt-2">Boka patch-fönster</h2>
-          <form action="/api/schedules" method="post" className="grid gap-2">
-            <input className="input" name="name" placeholder="Namn" required />
-            <input className="input" name="env" defaultValue="qa" />
-            <input className="input" name="basePath" defaultValue="../../../Ansible/environments" />
-            <label className="text-sm"><input type="checkbox" name="dryRun" value="1" className="mr-2" />Dry-run</label>
-            <input className="input" name="maxWorkers" type="number" defaultValue="2" />
-            <input className="input" name="probeTimeout" type="number" step="0.5" defaultValue="5" />
-            <select className="input" name="dayOfWeek" defaultValue="sun">
-              <option value="mon">Måndag</option><option value="tue">Tisdag</option><option value="wed">Onsdag</option>
-              <option value="thu">Torsdag</option><option value="fri">Fredag</option><option value="sat">Lördag</option><option value="sun">Söndag</option>
-            </select>
-            <input className="input" name="timeHHMM" type="time" defaultValue="02:00" />
-            <button className="btn" type="submit">Spara schema</button>
-          </form>
-        </div>
-
-        <div className="card space-y-3">
-          <h2 className="font-semibold">Scheman</h2>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead><tr className="text-left border-b"><th>Namn</th><th>När</th><th>Status</th><th></th></tr></thead>
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Start</th>
+                  <th>Environment</th>
+                  <th>Status</th>
+                  <th>Success</th>
+                  <th>Reports</th>
+                </tr>
+              </thead>
               <tbody>
-                {schedules.map((s) => (
-                  <tr key={s.id} className="border-b">
-                    <td className="py-2">{s.name}</td><td>{weekdayLabel(s.day_of_week)} {s.time_hhmm}</td><td>{s.enabled ? 'Aktiv' : 'Pausad'}</td>
-                    <td>
-                      <form action={`/api/schedules/${s.id}/toggle`} method="post">
-                        <button className="btn" type="submit">{s.enabled ? 'Pausa' : 'Aktivera'}</button>
-                      </form>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          <h2 className="font-semibold pt-2">Körhistorik</h2>
-          <div className="overflow-x-auto max-h-[420px]">
-            <table className="w-full text-sm">
-              <thead><tr className="text-left border-b"><th>Start</th><th>Env</th><th>Status</th><th>Success%</th><th>Rapport</th></tr></thead>
-              <tbody>
-                {runs.map((r) => (
-                  <tr key={r.id} className="border-b">
-                    <td className="py-2">{r.started_at}</td>
-                    <td>{r.env}</td>
-                    <td>{r.status}</td>
-                    <td>{r.success_pct}</td>
+                {runs.map((run) => (
+                  <tr key={run.id}>
+                    <td>#{run.id}</td>
+                    <td>{run.started_at}</td>
+                    <td>{run.env}</td>
+                    <td>{statusLabel(run.status)}</td>
+                    <td>{run.success_pct}%</td>
                     <td className="space-x-2">
-                      {r.report_json && <a className="text-blue-700 underline" href={`/${r.report_json}`}>json</a>}
-                      {r.report_xlsx && <a className="text-blue-700 underline" href={`/${r.report_xlsx}`}>xlsx</a>}
+                      {run.report_json && <a className="link" href={`/${run.report_json}`}>JSON</a>}
+                      {run.report_xlsx && <a className="link" href={`/${run.report_xlsx}`}>XLSX</a>}
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-        </div>
+        </section>
       </section>
     </main>
   );
