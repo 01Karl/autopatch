@@ -1,7 +1,7 @@
 import { ReactNode } from 'react';
 import LinkTabs from '@/app/_components/ui/LinkTabs';
 import { FiActivity, FiArrowLeft, FiBox, FiCheckCircle, FiClock, FiCpu, FiDatabase, FiFileText, FiHardDrive, FiKey, FiLock, FiRefreshCw, FiSettings, FiShield, FiSliders, FiTool, FiUser } from 'react-icons/fi';
-import { ContentTab, MachineSection } from '../_lib/machine-data';
+import { ContentTab, MachineSection, OverviewTab } from '../_lib/machine-data';
 
 type Props = {
   activeSection: MachineSection;
@@ -14,6 +14,7 @@ type Props = {
   platform: string;
   distribution: string;
   contentTab?: ContentTab;
+  overviewTab?: OverviewTab;
   logView?: 'overview' | 'journal' | 'snapshot' | 'alerts';
   children: ReactNode;
 };
@@ -23,6 +24,14 @@ const updatesTabs: { id: ContentTab; label: string }[] = [
   { id: 'errata', label: 'Errata' },
   { id: 'module-streams', label: 'Module streams' },
   { id: 'repository-sets', label: 'Repository sets' }
+];
+
+
+const overviewTabs: { id: OverviewTab; label: string }[] = [
+  { id: 'summary', label: 'Summary' },
+  { id: 'health', label: 'Health status' },
+  { id: 'operations', label: 'Operations' },
+  { id: 'lifecycle', label: 'Lifecycle' }
 ];
 
 const logsTabs: { id: 'overview' | 'journal' | 'snapshot' | 'alerts'; label: string }[] = [
@@ -58,6 +67,7 @@ export default function MachineShell({
   platform,
   distribution,
   contentTab,
+  overviewTab,
   logView,
   children
 }: Props) {
@@ -167,6 +177,23 @@ export default function MachineShell({
               <button className="machine-close-btn" type="button">×</button>
             </section>
 
+            {activeSection === 'overview' && (
+              <>
+                <p className="pane-context-text">Overview workspace · samla status, drift och livscykel i en sammanhållen vy.</p>
+                <LinkTabs
+                  activeKey={overviewTab ?? 'summary'}
+                  containerClassName="machine-actions-row"
+                  baseTabClassName="machine-content-tab"
+                  activeTabClassName="active"
+                  tabs={overviewTabs.map((tab) => ({
+                    key: tab.id,
+                    label: tab.label,
+                    href: `${machineBasePath}/overview?${machineQuery}&overview=${tab.id}`,
+                  }))}
+                />
+              </>
+            )}
+
             {activeSection === 'updates' && (
               <>
                 <p className="pane-context-text">Update content views · switch between package-, errata- och repositoryfokuserade vyer.</p>
@@ -201,7 +228,7 @@ export default function MachineShell({
               </>
             )}
 
-            {activeSection !== 'updates' && activeSection !== 'logs' && (
+            {activeSection !== 'overview' && activeSection !== 'updates' && activeSection !== 'logs' && (
               <p className="pane-context-text">Machine workflow for {sectionTitles[activeSection].toLowerCase()}.</p>
             )}
 

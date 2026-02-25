@@ -21,6 +21,7 @@ export type MachineSection =
   | 'locks';
 
 export type ContentTab = 'packages' | 'errata' | 'module-streams' | 'repository-sets';
+export type OverviewTab = 'summary' | 'health' | 'operations' | 'lifecycle';
 
 
 export type PackageInventoryItem = {
@@ -60,6 +61,7 @@ export type MachinePageSearchParams = {
   env?: string;
   basePath?: string;
   content?: string;
+  overview?: string;
   logView?: string;
   packageTab?: string;
 };
@@ -97,6 +99,12 @@ export function getMachineContext(machineNameParam: string, searchParams?: Machi
     searchParams?.logView === 'alerts'
       ? searchParams.logView
       : 'overview';
+  const overviewTab: OverviewTab =
+    searchParams?.overview === 'health' ||
+    searchParams?.overview === 'operations' ||
+    searchParams?.overview === 'lifecycle'
+      ? searchParams.overview
+      : 'summary';
   const packageTab: PackageTab =
     searchParams?.packageTab === 'files' ||
     searchParams?.packageTab === 'dependencies' ||
@@ -118,6 +126,7 @@ export function getMachineContext(machineNameParam: string, searchParams?: Machi
     selectedEnv,
     selectedBasePath,
     contentTab,
+    overviewTab,
     logView,
     packageTab,
     inventory,
