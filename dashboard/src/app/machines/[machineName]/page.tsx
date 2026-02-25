@@ -6,6 +6,7 @@ const ENV_OPTIONS = ['prod', 'qa', 'dev'] as const;
 const DEFAULT_BASE_PATH = 'environments';
 
 type MachineTab = 'recommended' | 'history' | 'scheduling';
+type ContentTab = 'packages' | 'errata' | 'module-streams' | 'repository-sets';
 
 type ScheduleRow = {
   id: number;
@@ -39,13 +40,31 @@ function weekdayLabel(day: string) {
 
 type MachinePageProps = {
   params: { machineName: string };
-  searchParams?: { env?: string; basePath?: string; tab?: string };
+  searchParams?: { env?: string; basePath?: string; tab?: string; content?: string };
 };
 
 const updates = [
   { name: 'Kernel security rollup', classification: 'Critical', severity: 'Critical', kb: 'LSA-2026-001', reboot: 'Requires reboot', published: '2026-01-18 03:10' },
   { name: 'OpenSSL package refresh', classification: 'Security', severity: 'Important', kb: 'LSA-2026-017', reboot: 'No reboot', published: '2026-01-20 11:30' },
   { name: 'Container runtime update', classification: 'Security', severity: 'Moderate', kb: 'LSA-2026-028', reboot: 'No reboot', published: '2026-02-02 07:50' }
+];
+
+const errata = [
+  { id: 'RLSA-2026:0018', type: 'Security', severity: 'Important', installable: 'Yes', synopsis: 'Kernel security update', published: '2026-01-18' },
+  { id: 'RLSA-2026:0022', type: 'Security', severity: 'Moderate', installable: 'Yes', synopsis: 'OpenSSL vulnerability fix', published: '2026-01-20' },
+  { id: 'RLEA-2026:0004', type: 'Bugfix', severity: 'Low', installable: 'Yes', synopsis: 'Container runtime stability update', published: '2026-02-02' }
+];
+
+const moduleStreams = [
+  { name: 'nodejs:20', status: 'Enabled', repoSet: 'rhel-9-appstream-rpms', profile: 'common', packages: 13 },
+  { name: 'postgresql:16', status: 'Enabled', repoSet: 'rhel-9-appstream-rpms', profile: 'server', packages: 8 },
+  { name: 'nginx:1.24', status: 'Available', repoSet: 'rhel-9-appstream-rpms', profile: 'minimal', packages: 5 }
+];
+
+const repositorySets = [
+  { name: 'rhel-9-baseos-rpms', state: 'Enabled', source: 'Satellite', contentType: 'RPM', lastSync: '2026-02-21 23:40' },
+  { name: 'rhel-9-appstream-rpms', state: 'Enabled', source: 'Satellite', contentType: 'RPM + Module', lastSync: '2026-02-21 23:40' },
+  { name: 'epel-9', state: 'Disabled', source: 'External mirror', contentType: 'RPM', lastSync: '2026-01-30 05:12' }
 ];
 
 const updateHistory = [
@@ -60,6 +79,12 @@ export default function MachinePage({ params, searchParams }: MachinePageProps) 
     : 'prod';
   const selectedBasePath = searchParams?.basePath || DEFAULT_BASE_PATH;
   const activeTab: MachineTab = searchParams?.tab === 'history' || searchParams?.tab === 'scheduling' ? searchParams.tab : 'recommended';
+  const contentTab: ContentTab =
+    searchParams?.content === 'errata' ||
+    searchParams?.content === 'module-streams' ||
+    searchParams?.content === 'repository-sets'
+      ? searchParams.content
+      : 'packages';
 
   const inventory = loadInventorySummary(selectedEnv, selectedBasePath);
   const machineName = decodeURIComponent(params.machineName);
@@ -78,6 +103,14 @@ export default function MachinePage({ params, searchParams }: MachinePageProps) 
   const otherCount = updates.filter((u) => u.classification === 'Other').length;
 
   const machineBaseHref = `/machines/${encodeURIComponent(machineName)}?env=${selectedEnv}&basePath=${selectedBasePath}`;
+  const recommendedBaseHref = `${machineBaseHref}&tab=recommended`;
+
+  const contentTabs: { id: ContentTab; label: string }[] = [
+    { id: 'packages', label: 'Packages' },
+    { id: 'errata', label: 'Errata' },
+    { id: 'module-streams', label: 'Module streams' },
+    { id: 'repository-sets', label: 'Repository sets' }
+  ];
 
   const machineMenuItems = [
     { label: 'Overview', icon: FiActivity },
@@ -178,7 +211,7 @@ export default function MachinePage({ params, searchParams }: MachinePageProps) 
             {!server && <p className="text-sm text-rose-700">Machine not found in inventory for selected environment.</p>}
 
             <section className="machine-tab-strip">
-              <a className={`machine-tab ${activeTab === 'recommended' ? 'active' : ''}`} href={`${machineBaseHref}&tab=recommended`}>Recommended updates</a>
+              <a className={`machine-tab ${activeTab === 'recommended' ? 'active' : ''}`} href={recommendedBaseHref}>Recommended updates</a>
               <a className={`machine-tab ${activeTab === 'history' ? 'active' : ''}`} href={`${machineBaseHref}&tab=history`}>Update history</a>
               <a className={`machine-tab ${activeTab === 'scheduling' ? 'active' : ''}`} href={`${machineBaseHref}&tab=scheduling`}>Scheduling</a>
             </section>
@@ -235,42 +268,166 @@ export default function MachinePage({ params, searchParams }: MachinePageProps) 
 
                 <p className="text-xs text-slate-500">Last assessed: 2026-02-22 15:12:24</p>
 
-                <div className="machine-filter-row">
-                  <span className="machine-filter-chip">Search by update name, KB ID...</span>
-                  <span className="machine-filter-chip">Classification : All</span>
-                  <span className="machine-filter-chip">Severity (MSRC) : All</span>
-                  <span className="machine-filter-chip">Reboot required : All</span>
-                  <a className="ml-auto link" href="#">Open query</a>
-                </div>
+                <section className="machine-content-tabs">
+                  {contentTabs.map((tabItem) => (
+                    <a
+                      key={tabItem.id}
+                      className={`machine-content-tab ${contentTab === tabItem.id ? 'active' : ''}`}
+                      href={`${recommendedBaseHref}&content=${tabItem.id}`}
+                    >
+                      {tabItem.label}
+                    </a>
+                  ))}
+                </section>
 
-                <p className="text-sm text-slate-600">Showing {updates.length} of {updates.length} results</p>
+                {contentTab === 'packages' && (
+                  <>
+                    <div className="machine-filter-row">
+                      <span className="machine-filter-chip">Search by update name, KB ID...</span>
+                      <span className="machine-filter-chip">Classification : All</span>
+                      <span className="machine-filter-chip">Severity (MSRC) : All</span>
+                      <span className="machine-filter-chip">Reboot required : All</span>
+                      <a className="ml-auto link" href="#">Open query</a>
+                    </div>
 
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr>
-                        <th>Update name ↕</th>
-                        <th>Classification ↕</th>
-                        <th>Severity (MSRC) ↕</th>
-                        <th>KB IDs ↕</th>
-                        <th>Reboot required ↕</th>
-                        <th>Published date ↕</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {updates.map((update) => (
-                        <tr key={update.kb}>
-                          <td>{update.name}</td>
-                          <td>{update.classification}</td>
-                          <td>{update.severity}</td>
-                          <td>{update.kb}</td>
-                          <td>{update.reboot}</td>
-                          <td>{update.published}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                    <p className="text-sm text-slate-600">Showing {updates.length} of {updates.length} packages</p>
+
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr>
+                            <th>Package ↕</th>
+                            <th>Classification ↕</th>
+                            <th>Severity (MSRC) ↕</th>
+                            <th>KB IDs ↕</th>
+                            <th>Reboot required ↕</th>
+                            <th>Published date ↕</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {updates.map((update) => (
+                            <tr key={update.kb}>
+                              <td>{update.name}</td>
+                              <td>{update.classification}</td>
+                              <td>{update.severity}</td>
+                              <td>{update.kb}</td>
+                              <td>{update.reboot}</td>
+                              <td>{update.published}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </>
+                )}
+
+                {contentTab === 'errata' && (
+                  <>
+                    <div className="machine-filter-row">
+                      <span className="machine-filter-chip">Search errata ID...</span>
+                      <span className="machine-filter-chip">Type : All</span>
+                      <span className="machine-filter-chip">Severity : All</span>
+                      <span className="machine-filter-chip">Installable : Yes</span>
+                    </div>
+                    <p className="text-sm text-slate-600">Showing {errata.length} of {errata.length} errata</p>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr>
+                            <th>Errata ↕</th>
+                            <th>Type ↕</th>
+                            <th>Severity ↕</th>
+                            <th>Installable ↕</th>
+                            <th>Synopsis ↕</th>
+                            <th>Published date ↕</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {errata.map((entry) => (
+                            <tr key={entry.id}>
+                              <td>{entry.id}</td>
+                              <td>{entry.type}</td>
+                              <td>{entry.severity}</td>
+                              <td>{entry.installable}</td>
+                              <td>{entry.synopsis}</td>
+                              <td>{entry.published}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </>
+                )}
+
+                {contentTab === 'module-streams' && (
+                  <>
+                    <div className="machine-filter-row">
+                      <span className="machine-filter-chip">Search module stream...</span>
+                      <span className="machine-filter-chip">Status : All</span>
+                      <span className="machine-filter-chip">Repository set : All</span>
+                    </div>
+                    <p className="text-sm text-slate-600">Showing {moduleStreams.length} of {moduleStreams.length} module streams</p>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr>
+                            <th>Module stream ↕</th>
+                            <th>Status ↕</th>
+                            <th>Repository set ↕</th>
+                            <th>Profile ↕</th>
+                            <th>Packages ↕</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {moduleStreams.map((stream) => (
+                            <tr key={stream.name}>
+                              <td>{stream.name}</td>
+                              <td>{stream.status}</td>
+                              <td>{stream.repoSet}</td>
+                              <td>{stream.profile}</td>
+                              <td>{stream.packages}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </>
+                )}
+
+                {contentTab === 'repository-sets' && (
+                  <>
+                    <div className="machine-filter-row">
+                      <span className="machine-filter-chip">Search repository set...</span>
+                      <span className="machine-filter-chip">State : All</span>
+                      <span className="machine-filter-chip">Source : All</span>
+                    </div>
+                    <p className="text-sm text-slate-600">Showing {repositorySets.length} of {repositorySets.length} repository sets</p>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr>
+                            <th>Repository set ↕</th>
+                            <th>State ↕</th>
+                            <th>Source ↕</th>
+                            <th>Content type ↕</th>
+                            <th>Last sync ↕</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {repositorySets.map((repo) => (
+                            <tr key={repo.name}>
+                              <td>{repo.name}</td>
+                              <td>{repo.state}</td>
+                              <td>{repo.source}</td>
+                              <td>{repo.contentType}</td>
+                              <td>{repo.lastSync}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </>
+                )}
               </section>
             )}
 
