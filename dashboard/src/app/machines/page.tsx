@@ -38,6 +38,13 @@ const NAV_SECTIONS: NavSection[] = [
   { title: 'Reports', keys: ['update-reports'] }
 ];
 
+function getComplianceStyle(compliance: string): string {
+  if (compliance === 'Non-compliant') return 'text-rose-600';
+  if (compliance === 'At risk') return 'text-amber-500';
+  if (compliance === 'Compliant') return 'text-emerald-600';
+  return 'text-slate-600';
+}
+
 export default function MachinesPage({ searchParams }: { searchParams?: SearchParams }) {
   const selectedEnv = ENV_OPTIONS.includes(searchParams?.env as 'all' | MachineEnv) ? (searchParams?.env as 'all' | MachineEnv) : 'prod';
   const selectedCriticality = searchParams?.criticality || 'all';
@@ -163,7 +170,11 @@ export default function MachinesPage({ searchParams }: { searchParams?: SearchPa
                         <td><span className="inline-flex items-center gap-1"><FiUsers /> {machine.metadata.owner}</span></td>
                         <td><span className="inline-flex items-center gap-1"><FiMapPin /> {machine.metadata.location}</span></td>
                         <td>{machine.metadata.criticality}</td>
-                        <td><span className="inline-flex items-center gap-1"><FiShield /> {machine.metadata.compliance}</span></td>
+                        <td>
+                          <span className={`inline-flex items-center gap-1 ${getComplianceStyle(machine.metadata.compliance)}`}>
+                            <FiShield /> {machine.metadata.compliance}
+                          </span>
+                        </td>
                         <td>{machine.metadata.osVersion}</td>
                         <td>{machine.metadata.patchWindow}</td>
                         <td>{machine.metadata.lastSeen}</td>
