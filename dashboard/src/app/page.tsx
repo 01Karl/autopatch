@@ -1,4 +1,6 @@
 import db from '@/lib/db';
+import { decodeSession, getSessionCookieName } from '@/lib/auth';
+import { cookies } from 'next/headers';
 import { mergeInventories } from '@/lib/inventory';
 import type { IconType } from 'react-icons';
 import { FiBarChart2, FiClock, FiHome, FiMonitor, FiPlayCircle, FiRefreshCw, FiServer } from 'react-icons/fi';
@@ -27,6 +29,20 @@ type ScheduleRow = {
 };
 
 type NavKey = 'overview' | 'get-started' | 'machines' | 'history' | 'update-reports';
+
+type FreeIPAConfigRow = {
+  base_url: string;
+  username_suffix: string;
+  verify_tls: number;
+};
+
+type ServiceAccountRow = {
+  id: number;
+  name: string;
+  purpose: string;
+  username: string;
+  created_at: string;
+};
 
 type NavItem = {
   key: NavKey;
@@ -188,6 +204,10 @@ export default function HomePage({ searchParams }: { searchParams?: DashboardSea
 
   const runs = db.prepare('SELECT * FROM runs ORDER BY id DESC LIMIT 50').all() as RunRow[];
   const schedules = db.prepare('SELECT id,name,env,day_of_week,time_hhmm,enabled FROM schedules ORDER BY id DESC').all() as ScheduleRow[];
+  const freeipaConfig = db.prepare('SELECT base_url, username_suffix, verify_tls FROM freeipa_config WHERE id = 1').get() as FreeIPAConfigRow;
+  const serviceAccounts = db.prepare('SELECT id, name, purpose, username, created_at FROM service_accounts ORDER BY id DESC').all() as ServiceAccountRow[];
+  const sessionToken = cookies().get(getSessionCookieName())?.value;
+  const session = decodeSession(sessionToken);
   const latestRun = runs[0];
   const envRuns = selectedEnv === 'all' ? runs : runs.filter((run) => run.env === selectedEnv);
   const latestEnvRun = envRuns[0];
@@ -267,7 +287,12 @@ export default function HomePage({ searchParams }: { searchParams?: DashboardSea
       <header className="top-header">
         <div className="brand">OpenPatch Console</div>
         <input className="header-search" placeholder="Search resources, services and docs" />
-        <div className="header-user">Connie Wilson · CONTOSO</div>
+        <div className="header-user">
+          <span>{session?.username || 'Okänd användare'}</span>
+          <form action="/api/auth/logout" method="post" className="inline">
+            <button className="ghost-btn ml-3" type="submit">Logga ut</button>
+          </form>
+        </div>
       </header>
 
       <div className="shell-layout">
@@ -360,6 +385,66 @@ export default function HomePage({ searchParams }: { searchParams?: DashboardSea
                   <h2 className="text-lg font-semibold">Get started</h2>
                   <p className="text-sm text-slate-600">1) Gå till Machines och välj Environment + filter. 2) Kontrollera inventory-sökväg. 3) Starta patch-run eller skapa schema.</p>
                   <p className="text-sm text-slate-600">När du klickar Machines visas en komplett maskinlista med patch-status, plattform, distribution, kluster, resurstyp och associerade scheman.</p>
+                </section>
+
+                <section className="table-card p-6 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-lg font-semibold">FreeIPA integration</h2>
+                    <span className="text-xs text-slate-500">API-stöd för central inloggning och service-konton</span>
+                  </div>
+
+                  <form action="/api/freeipa/config" method="post" className="grid gap-3 md:grid-cols-3">
+                    <label className="text-xs text-slate-500">FreeIPA base URL
+                      <input className="mt-1 w-full rounded-md border border-slate-300 px-2 py-1 text-sm" name="baseUrl" defaultValue={freeipaConfig?.base_url || ''} placeholder="https://ipa.example.com" required />
+                    </label>
+                    <label className="text-xs text-slate-500">Username suffix
+                      <input className="mt-1 w-full rounded-md border border-slate-300 px-2 py-1 text-sm" name="usernameSuffix" defaultValue={freeipaConfig?.username_suffix || ''} placeholder="@EXAMPLE.COM" />
+                    </label>
+                    <label className="text-xs text-slate-500">TLS verification
+                      <select className="mt-1 w-full rounded-md border border-slate-300 bg-white px-2 py-1 text-sm" name="verifyTls" defaultValue={String(freeipaConfig?.verify_tls ?? 1)}>
+                        <option value="1">Strict</option>
+                        <option value="0">Disabled (test only)</option>
+                      </select>
+                    </label>
+                    <div className="md:col-span-3">
+                      <button className="primary-btn" type="submit">Spara FreeIPA inställningar</button>
+                    </div>
+                  </form>
+
+                  <form action="/api/freeipa/service-accounts" method="post" className="grid gap-3 md:grid-cols-4">
+                    <label className="text-xs text-slate-500">Namn
+                      <input className="mt-1 w-full rounded-md border border-slate-300 px-2 py-1 text-sm" name="name" placeholder="ansible-git-bot" required />
+                    </label>
+                    <label className="text-xs text-slate-500">Syfte
+                      <input className="mt-1 w-full rounded-md border border-slate-300 px-2 py-1 text-sm" name="purpose" placeholder="Modifiera playbooks och pusha git" required />
+                    </label>
+                    <label className="text-xs text-slate-500">Username
+                      <input className="mt-1 w-full rounded-md border border-slate-300 px-2 py-1 text-sm" name="username" placeholder="svc_ansible_git" required />
+                    </label>
+                    <label className="text-xs text-slate-500">Secret
+                      <input className="mt-1 w-full rounded-md border border-slate-300 px-2 py-1 text-sm" type="password" name="secret" required />
+                    </label>
+                    <div className="md:col-span-4">
+                      <button className="primary-btn" type="submit">Lägg till service-konto</button>
+                    </div>
+                  </form>
+
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead><tr><th>Namn</th><th>Syfte</th><th>Username</th><th>Skapad</th></tr></thead>
+                      <tbody>
+                        {serviceAccounts.map((account) => (
+                          <tr key={account.id}>
+                            <td>{account.name}</td>
+                            <td>{account.purpose}</td>
+                            <td>{account.username}</td>
+                            <td>{account.created_at}</td>
+                          </tr>
+                        ))}
+                        {serviceAccounts.length === 0 && <tr><td colSpan={4} className="text-slate-500">Inga service-konton registrerade ännu.</td></tr>}
+                      </tbody>
+                    </table>
+                  </div>
                 </section>
 
                 <section className="table-card p-6 space-y-4">
