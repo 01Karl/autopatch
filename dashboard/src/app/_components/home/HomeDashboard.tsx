@@ -4,7 +4,7 @@ import { getFreeIPAConfigPath, getPlaybookRoutines } from '@/lib/config';
 import { getFreeIPAConfig } from '@/lib/freeipa';
 import { cookies } from 'next/headers';
 import { mergeInventories } from '@/lib/inventory';
-import { FiRefreshCw } from 'react-icons/fi';
+import { FiMonitor, FiRefreshCw, FiServer } from 'react-icons/fi';
 import ManagerSidebarNav, { isValidManagerNavKey } from '@/app/_components/layout/ManagerSidebarNav';
 import LinkTabs from '@/app/_components/ui/LinkTabs';
 import { AppButton, AppButtonLink } from '@/app/_components/ui/AppButton';
@@ -252,20 +252,20 @@ export default function HomePage({ searchParams }: { searchParams?: DashboardSea
             </div>
           </section>
 
-          <section className="tabs-row">
-            <span className="tab active">Overseer Infrastructure Manager</span>
-            <span className="tab">Environment: {selectedEnv.toUpperCase()}</span>
-            <span className="tab">Inventory: {inventory.inventory_path}</span>
-            <span className="tab">Source: {inventory.source ?? 'ansible'}</span>
-          </section>
-
           <section className="content-area space-y-5">
-            <div>
-              <h2 className="text-xl font-semibold">Environment overview</h2>
-              <p className="mt-1 text-sm text-slate-500">Läser från {selectedBasePath}/{selectedEnv}/inventory via Python-integration.</p>
-              {inventory.error && <p className="mt-2 text-sm text-rose-700">Inventory-fel: {inventory.error}</p>}
-              {inventoryByEnv.some((item) => item.source === 'fixture') && <p className="mt-2 text-sm text-amber-700">Visar fejkdata från JSON-fixtures för snabb UI-test.</p>}
-            </div>
+            <section className="table-card">
+              <div className="table-head flex flex-wrap items-center gap-2">
+                <h2>Environment overview</h2>
+                <span className="chip">Environment: {selectedEnv.toUpperCase()}</span>
+                <span className="chip">Inventory: {inventory.inventory_path}</span>
+                <span className="chip">Source: {inventory.source ?? 'ansible'}</span>
+              </div>
+              <div className="p-4 text-sm text-slate-500 space-y-2">
+                <p>Läser från {selectedBasePath}/{selectedEnv}/inventory via Python-integration.</p>
+                {inventory.error && <p className="text-rose-700">Inventory-fel: {inventory.error}</p>}
+                {inventoryByEnv.some((item) => item.source === 'fixture') && <p className="text-amber-700">Visar fejkdata från JSON-fixtures för snabb UI-test.</p>}
+              </div>
+            </section>
 
             {activeView === 'overview' && (
               <>
