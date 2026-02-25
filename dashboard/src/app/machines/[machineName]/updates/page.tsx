@@ -102,7 +102,7 @@ export default function MachineUpdatesPage({ params, searchParams }: Props) {
               <span className="machine-filter-chip">Search errata ID...</span>
               <span className="machine-filter-chip">Type : All</span>
               <span className="machine-filter-chip">Severity : All</span>
-              <span className="machine-filter-chip">Installable : Yes</span>
+              <span className="machine-filter-chip">Installable : Applicable</span>
             </div>
             <p className="text-sm text-slate-600">Showing {errata.length} of {errata.length} errata</p>
             <div className="overflow-x-auto">
@@ -113,8 +113,10 @@ export default function MachineUpdatesPage({ params, searchParams }: Props) {
                     <th>Type ↕</th>
                     <th>Severity ↕</th>
                     <th>Installable ↕</th>
+                    <th>CVEs ↕</th>
+                    <th>Packages ↕</th>
                     <th>Synopsis ↕</th>
-                    <th>Published date ↕</th>
+                    <th>Published / Updated ↕</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -124,8 +126,10 @@ export default function MachineUpdatesPage({ params, searchParams }: Props) {
                       <td>{entry.type}</td>
                       <td>{entry.severity}</td>
                       <td>{entry.installable}</td>
+                      <td>{entry.cves.length > 0 ? entry.cves.join(', ') : '—'}</td>
+                      <td>{entry.packages}</td>
                       <td>{entry.synopsis}</td>
-                      <td>{entry.published}</td>
+                      <td>{entry.published} / {entry.updated}</td>
                     </tr>
                   ))}
                 </tbody>

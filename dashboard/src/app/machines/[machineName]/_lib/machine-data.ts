@@ -1,4 +1,6 @@
 import { loadInventorySummary } from '@/lib/inventory';
+import logsData from '@/mock-data/machines/logs.json';
+import securityData from '@/mock-data/machines/security.json';
 
 export const ENV_OPTIONS = ['prod', 'qa', 'dev'] as const;
 export const DEFAULT_BASE_PATH = 'environments';
@@ -85,11 +87,7 @@ export const updates = [
   { name: 'Container runtime update', classification: 'Security', severity: 'Moderate', kb: 'LSA-2026-028', reboot: 'No reboot', published: '2026-02-02 07:50' }
 ];
 
-export const errata = [
-  { id: 'RLSA-2026:0018', type: 'Security', severity: 'Important', installable: 'Yes', synopsis: 'Kernel security update', published: '2026-01-18' },
-  { id: 'RLSA-2026:0022', type: 'Security', severity: 'Moderate', installable: 'Yes', synopsis: 'OpenSSL vulnerability fix', published: '2026-01-20' },
-  { id: 'RLEA-2026:0004', type: 'Bugfix', severity: 'Low', installable: 'Yes', synopsis: 'Container runtime stability update', published: '2026-02-02' }
-];
+export const errata = securityData.errata;
 
 export const moduleStreams = [
   { name: 'nodejs:20', status: 'Enabled', repoSet: 'rhel-9-appstream-rpms', profile: 'common', packages: 13 },
@@ -103,17 +101,23 @@ export const repositorySets = [
   { name: 'epel-9', state: 'Disabled', source: 'External mirror', contentType: 'RPM', lastSync: '2026-01-30 05:12' }
 ];
 
-export const securityFindings = [
-  { cve: 'CVE-2026-1123', package: 'openssl', severity: 'High', status: 'Open', action: 'Patch with LSA-2026-017' },
-  { cve: 'CVE-2026-1301', package: 'kernel', severity: 'Critical', status: 'Mitigated in staging', action: 'Promote tested kernel rollout' },
-  { cve: 'CVE-2026-1440', package: 'containerd', severity: 'Medium', status: 'Open', action: 'Schedule during maintenance window' }
+export const securityFindings = securityData.securityFindings;
+
+export const policyChecks = securityData.policyChecks;
+
+export const gpgKeyStatus = [
+  { keyId: '199E2F91FD431D51', source: 'RHEL 9 BaseOS', fingerprint: '567E 347A D004 4ADE 55BA 8A5F 199E 2F91 FD43 1D51', expires: '2029-06-01', trust: 'Trusted' },
+  { keyId: '350D275DCD4F8A9A', source: 'RHEL 9 AppStream', fingerprint: 'B442 69D0 4F2A 6FD2 D600 82B0 350D 275D CD4F 8A9A', expires: '2029-06-01', trust: 'Trusted' },
+  { keyId: 'A8A447DCE8562897', source: 'EPEL 9', fingerprint: 'FF8A D134 4597 106E CE81 D35A A8A4 47DC E856 2897', expires: '2027-12-15', trust: 'Pending rotation' }
 ];
 
-export const policyChecks = [
-  { policy: 'Critical patches within 7 days', status: 'At risk', details: '1 patch is older than SLA' },
-  { policy: 'No unsupported repositories', status: 'Compliant', details: 'Only approved repositories active' },
-  { policy: 'Reboot after kernel update', status: 'Compliant', details: 'Last kernel reboot completed' }
-];
+export type LinuxLogCategory = 'system' | 'security' | 'services' | 'network' | 'access';
+
+export const linuxLogCategories = logsData.linuxLogCategories;
+
+export const linuxLogFiles = logsData.linuxLogFiles;
+
+export const logInsights = logsData.logInsights;
 
 export const gpgKeyStatus = [
   { keyId: '199E2F91FD431D51', source: 'RHEL 9 BaseOS', fingerprint: '567E 347A D004 4ADE 55BA 8A5F 199E 2F91 FD43 1D51', expires: '2029-06-01', trust: 'Trusted' },
