@@ -93,3 +93,10 @@ table td {@apply border-b border-slate-100 px-3 py-2;}
 .machine-name-cell {@apply inline-flex items-center gap-2;}
 .machine-name-icon {@apply h-4 w-4 text-slate-500;}
 .machine-env-chip {@apply rounded-sm border border-slate-300 bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-slate-600;}
+
+
+.machine-side-nav {@apply flex max-h-[calc(100vh-46px)] flex-col overflow-y-auto;}
+.machine-nav-group {@apply border-t border-slate-200 pt-2;}
+.machine-tab {@apply inline-flex items-center gap-1;}
+.machine-schedule-list {@apply grid gap-2;}
+.machine-schedule-item {@apply flex items-center justify-between rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm;}
