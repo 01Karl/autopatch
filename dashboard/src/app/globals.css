@@ -5,6 +5,18 @@
 body {@apply bg-[#f3f2f1] text-slate-900;}
 
 .azure-shell {@apply min-h-screen;}
+.top-header {@apply flex items-center gap-4 bg-[#0078d4] px-4 py-2 text-white;}
+.brand {@apply text-sm font-semibold md:text-base;}
+.header-search {@apply hidden w-full max-w-xl rounded-sm border border-blue-300 bg-blue-50/90 px-3 py-1 text-sm text-slate-900 placeholder:text-slate-500 md:block;}
+.header-user {@apply ml-auto text-xs md:text-sm;}
+
+.shell-layout {@apply grid min-h-[calc(100vh-48px)] grid-cols-1 md:grid-cols-[220px_1fr];}
+.side-nav {@apply border-r border-slate-300 bg-[#faf9f8] p-4;}
+.side-title {@apply mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500;}
+.side-link {@apply mb-1 block rounded-md px-3 py-2 text-sm text-slate-700 hover:bg-slate-200/70;}
+.side-link.active {@apply bg-blue-100 font-medium text-blue-800;}
+.main-pane {@apply min-w-0;}
+
 .command-bar {@apply flex flex-col gap-2 border-b border-slate-300 bg-white px-4 py-2 md:flex-row md:items-center md:justify-between;}
 .command-left, .command-right {@apply flex flex-wrap gap-1;}
 .ghost-btn {@apply inline-flex items-center rounded-md border border-transparent px-3 py-1.5 text-sm text-slate-700 hover:border-slate-300 hover:bg-slate-50;}
@@ -12,7 +24,7 @@ body {@apply bg-[#f3f2f1] text-slate-900;}
 .input {@apply rounded-md border border-slate-300 bg-white px-3 py-2 text-sm;}
 .form-grid {@apply grid grid-cols-1 gap-2 md:grid-cols-2;}
 
-.tabs-row {@apply flex gap-5 border-b border-slate-300 bg-white px-6 pt-3;}
+.tabs-row {@apply flex flex-wrap gap-5 border-b border-slate-300 bg-white px-6 pt-3;}
 .tab {@apply border-b-2 border-transparent px-1 pb-2 text-sm text-slate-600;}
 .tab.active {@apply border-blue-600 font-medium text-slate-900;}
 
