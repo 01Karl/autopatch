@@ -61,7 +61,9 @@ function machineStatusText(status: string) {
   return 'No pending updates';
 }
 
-export default function HomePage({ searchParams }: { searchParams?: { env?: string; view?: string; basePath?: string } }) {
+type DashboardSearchParams = { env?: string; view?: string; basePath?: string; resourceType?: string; distribution?: string; platform?: string };
+
+export default function HomePage({ searchParams }: { searchParams?: DashboardSearchParams }) {
   const linuxDistributions = ['Ubuntu', 'Debian', 'RHEL', 'Rocky Linux', 'SUSE Linux Enterprise', 'AlmaLinux'] as const;
   const unixDistributions = ['AIX', 'Solaris'] as const;
   const bsdDistributions = ['FreeBSD 13', 'FreeBSD 14'] as const;
@@ -112,8 +114,8 @@ export default function HomePage({ searchParams }: { searchParams?: { env?: stri
       updateStatus: machineStatusText(statusLabel(latestEnvRun?.status ?? 'pending')),
       platform,
       distribution,
-      resourceType: server.cluster === 'standalone' ? 'Arc-enabled server' : 'Azure virtual machine',
-      patchOrchestration: server.cluster === 'standalone' ? 'Image Default' : 'Azure Managed - Safe Deployment',
+      resourceType: server.cluster === 'standalone' ? 'Bare metal server' : 'Virtual machine',
+      patchOrchestration: server.cluster === 'standalone' ? 'Native package manager' : 'Agent managed rollout',
       periodicAssessment: idx % 2 === 0 ? 'Yes' : 'No',
       associatedSchedules: envSchedules[0]?.name ?? '-',
       powerState: idx % 4 === 0 ? 'VM running' : 'VM deallocated',
@@ -142,7 +144,7 @@ export default function HomePage({ searchParams }: { searchParams?: { env?: stri
   return (
     <main className="azure-shell">
       <header className="top-header">
-        <div className="brand">Microsoft Azure</div>
+        <div className="brand">OpenPatch Console</div>
         <input className="header-search" placeholder="Search resources, services and docs" />
         <div className="header-user">Connie Wilson · CONTOSO</div>
       </header>
@@ -178,7 +180,7 @@ export default function HomePage({ searchParams }: { searchParams?: { env?: stri
           </section>
 
           <section className="tabs-row">
-            <span className="tab active">Azure Update Manager</span>
+            <span className="tab active">OpenPatch Update Manager</span>
             <span className="tab">Environment: {selectedEnv.toUpperCase()}</span>
             <span className="tab">Inventory: {inventory.inventory_path}</span>
             <span className="tab">Source: {inventory.source ?? 'ansible'}</span>
@@ -186,7 +188,7 @@ export default function HomePage({ searchParams }: { searchParams?: { env?: stri
 
           <section className="content-area space-y-5">
             <div>
-              <h1 className="text-3xl font-semibold">Azure Update Manager</h1>
+              <h1 className="text-3xl font-semibold">OpenPatch Update Manager</h1>
               <p className="mt-1 text-sm text-slate-500">Läser från {selectedBasePath}/{selectedEnv}/inventory via Python-integration.</p>
               {inventory.error && <p className="mt-2 text-sm text-rose-700">Inventory-fel: {inventory.error}</p>}
               {inventory.source === 'fixture' && <p className="mt-2 text-sm text-amber-700">Visar fejkdata från JSON-fixtures för snabb UI-test.</p>}
@@ -305,7 +307,7 @@ export default function HomePage({ searchParams }: { searchParams?: { env?: stri
                       <tbody>
                         {filteredMachineRows.map((row) => (
                           <tr key={row.name}>
-                            <td>{row.name}</td><td>{row.updateStatus}</td><td>{row.platform}</td><td>{row.distribution}</td><td>{row.resourceType}</td><td>{row.patchOrchestration}</td><td>{row.periodicAssessment}</td><td>{row.associatedSchedules}</td><td>{row.powerState}</td>
+                            <td><a className="link" href={`/machines/${encodeURIComponent(row.name)}?env=${selectedEnv}&basePath=${selectedBasePath}`}>{row.name}</a></td><td>{row.updateStatus}</td><td>{row.platform}</td><td>{row.distribution}</td><td>{row.resourceType}</td><td>{row.patchOrchestration}</td><td>{row.periodicAssessment}</td><td>{row.associatedSchedules}</td><td>{row.powerState}</td>
                           </tr>
                         ))}
                         {filteredMachineRows.length === 0 && <tr><td colSpan={9} className="text-slate-500">No machines found with selected filters.</td></tr>}
