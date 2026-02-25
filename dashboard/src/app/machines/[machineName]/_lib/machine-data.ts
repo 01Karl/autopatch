@@ -7,6 +7,8 @@ export type MachineSection =
   | 'overview'
   | 'updates'
   | 'security'
+  | 'repository-trust'
+  | 'logs'
   | 'advisor-recommendations'
   | 'extensions'
   | 'continuous-delivery'
@@ -111,6 +113,19 @@ export const policyChecks = [
   { policy: 'Critical patches within 7 days', status: 'At risk', details: '1 patch is older than SLA' },
   { policy: 'No unsupported repositories', status: 'Compliant', details: 'Only approved repositories active' },
   { policy: 'Reboot after kernel update', status: 'Compliant', details: 'Last kernel reboot completed' }
+];
+
+export const gpgKeyStatus = [
+  { keyId: '199E2F91FD431D51', source: 'RHEL 9 BaseOS', fingerprint: '567E 347A D004 4ADE 55BA 8A5F 199E 2F91 FD43 1D51', expires: '2029-06-01', trust: 'Trusted' },
+  { keyId: '350D275DCD4F8A9A', source: 'RHEL 9 AppStream', fingerprint: 'B442 69D0 4F2A 6FD2 D600 82B0 350D 275D CD4F 8A9A', expires: '2029-06-01', trust: 'Trusted' },
+  { keyId: 'A8A447DCE8562897', source: 'EPEL 9', fingerprint: 'FF8A D134 4597 106E CE81 D35A A8A4 47DC E856 2897', expires: '2027-12-15', trust: 'Pending rotation' }
+];
+
+export const logInsights = [
+  { source: 'journald', signal: 'Failed ssh login attempts', level: 'Warning', count: 14, latest: '2026-02-24 23:14' },
+  { source: 'auditd', signal: 'sudo privilege escalation', level: 'Info', count: 3, latest: '2026-02-24 21:48' },
+  { source: 'kernel', signal: 'SELinux deny event', level: 'Warning', count: 2, latest: '2026-02-24 20:06' },
+  { source: 'dnf', signal: 'Unsigned repo metadata blocked', level: 'Critical', count: 1, latest: '2026-02-23 09:17' }
 ];
 
 export const advisorHighlights = [
