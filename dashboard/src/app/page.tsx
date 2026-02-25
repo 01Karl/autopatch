@@ -62,11 +62,18 @@ function machineStatusText(status: string) {
 }
 
 export default function HomePage({ searchParams }: { searchParams?: { env?: string; view?: string; basePath?: string } }) {
+  const linuxDistributions = ['Ubuntu', 'Debian', 'RHEL', 'Rocky Linux', 'SUSE Linux Enterprise', 'AlmaLinux'] as const;
+  const unixDistributions = ['AIX', 'Solaris'] as const;
+  const bsdDistributions = ['FreeBSD 13', 'FreeBSD 14'] as const;
+
   const selectedEnv = ENV_OPTIONS.includes(searchParams?.env as (typeof ENV_OPTIONS)[number])
     ? (searchParams?.env as (typeof ENV_OPTIONS)[number])
     : 'prod';
   const selectedBasePath = searchParams?.basePath || DEFAULT_BASE_PATH;
   const activeView = NAV_ITEMS.some((item) => item.key === searchParams?.view) ? searchParams?.view || 'overview' : 'overview';
+  const selectedResourceType = searchParams?.resourceType || 'all';
+  const selectedDistribution = searchParams?.distribution || 'all';
+  const selectedPlatform = searchParams?.platform || 'all';
 
   const runs = db.prepare('SELECT * FROM runs ORDER BY id DESC LIMIT 50').all() as RunRow[];
   const schedules = db.prepare('SELECT id,name,env,day_of_week,time_hhmm,enabled FROM schedules ORDER BY id DESC').all() as ScheduleRow[];
@@ -91,16 +98,38 @@ export default function HomePage({ searchParams }: { searchParams?: { env?: stri
   const failedRuns = envRuns.filter((run) => run.status === 'failed' || run.status === 'FAILED').length;
   const envSchedules = schedules.filter((schedule) => schedule.env === selectedEnv);
 
-  const machineRows = inventory.servers.map((server, idx) => ({
-    name: server.hostname,
-    updateStatus: machineStatusText(statusLabel(latestEnvRun?.status ?? 'pending')),
-    operatingSystem: idx % 3 === 0 ? 'Windows' : 'Linux',
-    resourceType: server.cluster === 'standalone' ? 'Arc-enabled server' : 'Azure virtual machine',
-    patchOrchestration: server.cluster === 'standalone' ? 'N/A' : 'Azure Managed - Safe Deployment',
-    periodicAssessment: idx % 2 === 0 ? 'Yes' : 'No',
-    associatedSchedules: envSchedules[0]?.name ?? '-',
-    powerState: idx % 4 === 0 ? 'VM running' : 'VM deallocated',
-  }));
+  const machineRows = inventory.servers.map((server, idx) => {
+    const platform = idx % 9 === 0 ? 'FreeBSD' : idx % 7 === 0 ? 'Unix' : 'Linux';
+    const distribution =
+      platform === 'FreeBSD'
+        ? bsdDistributions[idx % bsdDistributions.length]
+        : platform === 'Unix'
+          ? unixDistributions[idx % unixDistributions.length]
+          : linuxDistributions[idx % linuxDistributions.length];
+
+    return {
+      name: server.hostname,
+      updateStatus: machineStatusText(statusLabel(latestEnvRun?.status ?? 'pending')),
+      platform,
+      distribution,
+      resourceType: server.cluster === 'standalone' ? 'Arc-enabled server' : 'Azure virtual machine',
+      patchOrchestration: server.cluster === 'standalone' ? 'Image Default' : 'Azure Managed - Safe Deployment',
+      periodicAssessment: idx % 2 === 0 ? 'Yes' : 'No',
+      associatedSchedules: envSchedules[0]?.name ?? '-',
+      powerState: idx % 4 === 0 ? 'VM running' : 'VM deallocated',
+    };
+  });
+
+  const resourceTypeOptions = ['all', ...new Set(machineRows.map((row) => row.resourceType))];
+  const distributionOptions = ['all', ...new Set(machineRows.map((row) => row.distribution))];
+  const platformOptions = ['all', ...new Set(machineRows.map((row) => row.platform))];
+
+  const filteredMachineRows = machineRows.filter((row) => {
+    const platformMatch = selectedPlatform === 'all' || row.platform === selectedPlatform;
+    const distributionMatch = selectedDistribution === 'all' || row.distribution === selectedDistribution;
+    const resourceTypeMatch = selectedResourceType === 'all' || row.resourceType === selectedResourceType;
+    return platformMatch && distributionMatch && resourceTypeMatch;
+  });
 
   const csvHeader = 'id,started_at,env,status,ok_count,failed_count,skipped_count,total_targets,success_pct';
   const csvRows = runs.map((run) => [run.id, run.started_at, run.env, run.status, run.ok_count, run.failed_count, run.skipped_count, run.total_targets, run.success_pct].join(','));
@@ -133,13 +162,6 @@ export default function HomePage({ searchParams }: { searchParams?: { env?: stri
             </a>
           ))}
 
-          <p className="side-title mt-6">Environments</p>
-          {ENV_OPTIONS.map((env) => (
-            <a key={env} href={`/?env=${env}&view=${activeView}&basePath=${selectedBasePath}`} className={`side-link ${selectedEnv === env ? 'active' : ''}`}>
-              <span className="side-icon">⬢</span>
-              <span>{env.toUpperCase()}</span>
-            </a>
-          ))}
         </aside>
 
         <section className="main-pane">
@@ -210,8 +232,8 @@ export default function HomePage({ searchParams }: { searchParams?: { env?: stri
             {activeView === 'get-started' && (
               <section className="table-card p-6 space-y-3">
                 <h2 className="text-lg font-semibold">Get started</h2>
-                <p className="text-sm text-slate-600">1) Välj miljö i vänstermenyn. 2) Kontrollera inventory-sökväg. 3) Starta patch-run eller skapa schema.</p>
-                <p className="text-sm text-slate-600">När du klickar Machines visas en komplett maskinlista med patch-status, OS, resurstyp och associerade scheman.</p>
+                <p className="text-sm text-slate-600">1) Gå till Machines och välj Environment + filter. 2) Kontrollera inventory-sökväg. 3) Starta patch-run eller skapa schema.</p>
+                <p className="text-sm text-slate-600">När du klickar Machines visas en komplett maskinlista med patch-status, plattform, distribution, resurstyp och associerade scheman.</p>
               </section>
             )}
 
@@ -235,21 +257,58 @@ export default function HomePage({ searchParams }: { searchParams?: { env?: stri
                 </div>
 
                 <section className="table-card">
-                  <div className="table-head"><h2>Machines</h2><span className="chip">Showing {machineRows.length} rows</span></div>
+                  <div className="table-head"><h2>Machines</h2><span className="chip">Showing {filteredMachineRows.length} rows</span></div>
+                  <form className="p-4 border-b border-slate-200 grid gap-3 md:grid-cols-2 lg:grid-cols-4" method="get">
+                    <input type="hidden" name="view" value={activeView} />
+                    <input type="hidden" name="basePath" value={selectedBasePath} />
+
+                    <label className="text-xs text-slate-500">Environment
+                      <select className="mt-1 w-full rounded-md border border-slate-300 bg-white px-2 py-1 text-sm" name="env" defaultValue={selectedEnv}>
+                        {ENV_OPTIONS.map((env) => (
+                          <option key={env} value={env}>{env.toUpperCase()}</option>
+                        ))}
+                      </select>
+                    </label>
+                    <label className="text-xs text-slate-500">Platform
+                      <select className="mt-1 w-full rounded-md border border-slate-300 bg-white px-2 py-1 text-sm" name="platform" defaultValue={selectedPlatform}>
+                        {platformOptions.map((option) => (
+                          <option key={option} value={option}>{option === 'all' ? 'All platforms' : option}</option>
+                        ))}
+                      </select>
+                    </label>
+                    <label className="text-xs text-slate-500">Distribution
+                      <select className="mt-1 w-full rounded-md border border-slate-300 bg-white px-2 py-1 text-sm" name="distribution" defaultValue={selectedDistribution}>
+                        {distributionOptions.map((option) => (
+                          <option key={option} value={option}>{option === 'all' ? 'All distributions' : option}</option>
+                        ))}
+                      </select>
+                    </label>
+                    <label className="text-xs text-slate-500">Resource type
+                      <select className="mt-1 w-full rounded-md border border-slate-300 bg-white px-2 py-1 text-sm" name="resourceType" defaultValue={selectedResourceType}>
+                        {resourceTypeOptions.map((option) => (
+                          <option key={option} value={option}>{option === 'all' ? 'All resource types' : option}</option>
+                        ))}
+                      </select>
+                    </label>
+                    <div className="md:col-span-2 lg:col-span-4 flex gap-2">
+                      <button className="primary-btn" type="submit">Apply filters</button>
+                      <a className="ghost-btn" href={`/?env=${selectedEnv}&view=${activeView}&basePath=${selectedBasePath}`}>Reset filters</a>
+                    </div>
+                  </form>
                   <div className="overflow-x-auto">
                     <table className="w-full text-sm">
                       <thead>
                         <tr>
-                          <th>Name</th><th>Update status</th><th>Operating system</th><th>Resource type</th><th>Patch orchestration</th><th>Periodic assessment</th><th>Associated schedules</th><th>Status</th>
+                          <th>Name</th><th>Update status</th><th>Platform</th><th>Distribution</th><th>Resource type</th><th>Patch orchestration</th><th>Periodic assessment</th><th>Associated schedules</th><th>Status</th>
                         </tr>
                       </thead>
                       <tbody>
-                        {machineRows.map((row) => (
+                        {filteredMachineRows.map((row) => (
                           <tr key={row.name}>
-                            <td>{row.name}</td><td>{row.updateStatus}</td><td>{row.operatingSystem}</td><td>{row.resourceType}</td><td>{row.patchOrchestration}</td><td>{row.periodicAssessment}</td><td>{row.associatedSchedules}</td><td>{row.powerState}</td>
+                            <td>{row.name}</td><td>{row.updateStatus}</td><td>{row.platform}</td><td>{row.distribution}</td><td>{row.resourceType}</td><td>{row.patchOrchestration}</td><td>{row.periodicAssessment}</td><td>{row.associatedSchedules}</td><td>{row.powerState}</td>
                           </tr>
                         ))}
-                        {machineRows.length === 0 && <tr><td colSpan={8} className="text-slate-500">No machines found in inventory.</td></tr>}
+                        {filteredMachineRows.length === 0 && <tr><td colSpan={9} className="text-slate-500">No machines found with selected filters.</td></tr>}
                       </tbody>
                     </table>
                   </div>
