@@ -1,12 +1,47 @@
 import db from '@/lib/db';
 
+type RunRow = {
+  id: number;
+  started_at: string;
+  env: string;
+  status: string;
+  ok_count: number;
+  failed_count: number;
+  skipped_count: number;
+  total_targets: number;
+  success_pct: number;
+  report_json?: string | null;
+  report_xlsx?: string | null;
+};
+
+type ScheduleRow = {
+  id: number;
+  name: string;
+  day_of_week: string;
+  time_hhmm: string;
+  enabled: number;
+};
+
 function pct(ok: number, total: number) {
   return total ? ((ok / total) * 100).toFixed(1) : '0.0';
 }
 
+function weekdayLabel(day: string) {
+  const map: Record<string, string> = {
+    mon: 'Mån',
+    tue: 'Tis',
+    wed: 'Ons',
+    thu: 'Tor',
+    fri: 'Fre',
+    sat: 'Lör',
+    sun: 'Sön',
+  };
+  return map[day] ?? day;
+}
+
 export default function HomePage() {
-  const runs = db.prepare('SELECT * FROM runs ORDER BY id DESC LIMIT 30').all() as any[];
-  const schedules = db.prepare('SELECT * FROM schedules ORDER BY id DESC').all() as any[];
+  const runs = db.prepare('SELECT * FROM runs ORDER BY id DESC LIMIT 30').all() as RunRow[];
+  const schedules = db.prepare('SELECT * FROM schedules ORDER BY id DESC').all() as ScheduleRow[];
 
   const totals = runs.reduce(
     (acc, run) => {
@@ -19,15 +54,99 @@ export default function HomePage() {
     { ok: 0, failed: 0, skipped: 0, targets: 0 }
   );
 
+  const completedRuns = runs.filter((run) => run.status === 'completed').length;
+  const failedRuns = runs.filter((run) => run.status === 'failed').length;
+  const activeSchedules = schedules.filter((schedule) => Boolean(schedule.enabled)).length;
+  const latestRun = runs[0];
+
+  const recentRuns = [...runs].reverse();
+  const exportRows = runs.map((run) => ({
+    id: run.id,
+    started_at: run.started_at,
+    env: run.env,
+    status: run.status,
+    ok_count: run.ok_count,
+    failed_count: run.failed_count,
+    skipped_count: run.skipped_count,
+    total_targets: run.total_targets,
+    success_pct: run.success_pct,
+  }));
+  const csv = [
+    Object.keys(exportRows[0] ?? { id: '', started_at: '', env: '', status: '', ok_count: '', failed_count: '', skipped_count: '', total_targets: '', success_pct: '' }).join(','),
+    ...exportRows.map((row) => Object.values(row).join(',')),
+  ].join('\n');
+  const csvHref = `data:text/csv;charset=utf-8,${encodeURIComponent(csv)}`;
+
   return (
     <main className="mx-auto max-w-7xl p-6 space-y-6">
-      <h1 className="text-3xl font-semibold">Autopatch Dashboard</h1>
+      <header className="hero-card">
+        <div>
+          <p className="text-sm font-medium text-blue-700">Operations center</p>
+          <h1 className="mt-1 text-3xl font-semibold tracking-tight">Autopatch Dashboard</h1>
+          <p className="mt-2 text-sm text-slate-600">Modern överblick av patch-status, scheman och rapporter på ett ställe.</p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <a className="btn" href={csvHref} download="autopatch-runs.csv">Exportera historik (CSV)</a>
+          {latestRun?.report_xlsx && (
+            <a className="btn btn-secondary" href={`/${latestRun.report_xlsx}`}>Ladda ner senaste Excel</a>
+          )}
+        </div>
+      </header>
 
-      <section className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="card"><p className="text-sm text-slate-500">Success %</p><p className="text-2xl font-semibold">{pct(totals.ok, totals.targets)}%</p></div>
-        <div className="card"><p className="text-sm text-slate-500">OK</p><p className="text-2xl font-semibold">{totals.ok}</p></div>
-        <div className="card"><p className="text-sm text-slate-500">FAILED</p><p className="text-2xl font-semibold">{totals.failed}</p></div>
-        <div className="card"><p className="text-sm text-slate-500">SKIPPED</p><p className="text-2xl font-semibold">{totals.skipped}</p></div>
+      <section className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-6 gap-4">
+        <div className="card stat-card"><p className="stat-label">Success %</p><p className="stat-value">{pct(totals.ok, totals.targets)}%</p></div>
+        <div className="card stat-card"><p className="stat-label">Totalt targets</p><p className="stat-value">{totals.targets}</p></div>
+        <div className="card stat-card"><p className="stat-label">OK</p><p className="stat-value">{totals.ok}</p></div>
+        <div className="card stat-card"><p className="stat-label">Failed</p><p className="stat-value">{totals.failed}</p></div>
+        <div className="card stat-card"><p className="stat-label">Körningar (30)</p><p className="stat-value">{runs.length}</p><p className="stat-sub">Klara: {completedRuns} • Misslyckade: {failedRuns}</p></div>
+        <div className="card stat-card"><p className="stat-label">Aktiva scheman</p><p className="stat-value">{activeSchedules}</p><p className="stat-sub">Totalt: {schedules.length}</p></div>
+      </section>
+
+      <section className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+        <div className="card space-y-4">
+          <h2 className="font-semibold">Resultattrend (senaste 30 körningar)</h2>
+          <div className="space-y-2">
+            {recentRuns.length === 0 && <p className="text-sm text-slate-500">Ingen körhistorik än.</p>}
+            {recentRuns.map((run) => {
+              const value = Math.max(0, Math.min(100, Number(run.success_pct) || 0));
+              return (
+                <div key={run.id}>
+                  <div className="mb-1 flex items-center justify-between text-xs text-slate-500">
+                    <span>#{run.id} • {run.env}</span>
+                    <span>{value.toFixed(1)}%</span>
+                  </div>
+                  <div className="h-2 w-full rounded-full bg-slate-200">
+                    <div className="h-2 rounded-full bg-blue-600" style={{ width: `${value}%` }} />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="card space-y-4">
+          <h2 className="font-semibold">Fördelning targets</h2>
+          <div className="grid gap-3">
+            {[
+              { label: 'OK', value: totals.ok, color: 'bg-emerald-500' },
+              { label: 'Failed', value: totals.failed, color: 'bg-rose-500' },
+              { label: 'Skipped', value: totals.skipped, color: 'bg-amber-500' },
+            ].map((item) => {
+              const share = totals.targets ? (item.value / totals.targets) * 100 : 0;
+              return (
+                <div key={item.label}>
+                  <div className="mb-1 flex items-center justify-between text-sm">
+                    <span>{item.label}</span>
+                    <span className="text-slate-500">{item.value} ({share.toFixed(1)}%)</span>
+                  </div>
+                  <div className="h-3 w-full rounded-full bg-slate-200">
+                    <div className={`h-3 rounded-full ${item.color}`} style={{ width: `${share}%` }} />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
       </section>
 
       <section className="grid grid-cols-1 xl:grid-cols-2 gap-6">
@@ -67,7 +186,7 @@ export default function HomePage() {
               <tbody>
                 {schedules.map((s) => (
                   <tr key={s.id} className="border-b">
-                    <td className="py-2">{s.name}</td><td>{s.day_of_week} {s.time_hhmm}</td><td>{s.enabled ? 'Aktiv' : 'Pausad'}</td>
+                    <td className="py-2">{s.name}</td><td>{weekdayLabel(s.day_of_week)} {s.time_hhmm}</td><td>{s.enabled ? 'Aktiv' : 'Pausad'}</td>
                     <td>
                       <form action={`/api/schedules/${s.id}/toggle`} method="post">
                         <button className="btn" type="submit">{s.enabled ? 'Pausa' : 'Aktivera'}</button>
