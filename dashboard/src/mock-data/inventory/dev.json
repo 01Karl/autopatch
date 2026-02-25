@@ -4,20 +4,24 @@
   "server_count": 12,
   "cluster_count": 1,
   "servers": [
-    { "hostname": "dev-app-01", "cluster": "dev_cluster", "env": "dev" },
-    { "hostname": "dev-app-02", "cluster": "dev_cluster", "env": "dev" },
-    { "hostname": "dev-app-03", "cluster": "dev_cluster", "env": "dev" },
-    { "hostname": "dev-db-01", "cluster": "standalone", "env": "dev" },
-    { "hostname": "dev-db-02", "cluster": "standalone", "env": "dev" },
-    { "hostname": "dev-ci-01", "cluster": "standalone", "env": "dev" },
-    { "hostname": "dev-ci-02", "cluster": "standalone", "env": "dev" },
-    { "hostname": "dev-ops-01", "cluster": "standalone", "env": "dev" },
-    { "hostname": "dev-ops-02", "cluster": "standalone", "env": "dev" },
-    { "hostname": "dev-ops-03", "cluster": "standalone", "env": "dev" },
-    { "hostname": "dev-lab-01", "cluster": "standalone", "env": "dev" },
-    { "hostname": "dev-lab-02", "cluster": "standalone", "env": "dev" }
+    { "hostname": "itapp01a-d", "cluster": "app_cluster", "env": "dev" },
+    { "hostname": "itapp01b-d", "cluster": "app_cluster", "env": "dev" },
+    { "hostname": "itapp01c-d", "cluster": "app_cluster", "env": "dev" },
+
+    { "hostname": "itdb01-d", "cluster": "standalone", "env": "dev" },
+    { "hostname": "itdb02-d", "cluster": "standalone", "env": "dev" },
+
+    { "hostname": "itci01-d", "cluster": "standalone", "env": "dev" },
+    { "hostname": "itci02-d", "cluster": "standalone", "env": "dev" },
+
+    { "hostname": "itops01-d", "cluster": "standalone", "env": "dev" },
+    { "hostname": "itops02-d", "cluster": "standalone", "env": "dev" },
+    { "hostname": "itops03-d", "cluster": "standalone", "env": "dev" },
+
+    { "hostname": "itlab01-d", "cluster": "standalone", "env": "dev" },
+    { "hostname": "itlab02-d", "cluster": "standalone", "env": "dev" }
   ],
   "clusters": [
-    { "name": "dev_cluster", "nodes": 3, "hosts": ["dev-app-01", "dev-app-02", "dev-app-03"] }
+    { "name": "app_cluster", "nodes": 3, "hosts": ["itapp01a-d", "itapp01b-d", "itapp01c-d"] }
   ]
 }

@@ -4,19 +4,21 @@
   "server_count": 10,
   "cluster_count": 2,
   "servers": [
-    { "hostname": "qa-web-01", "cluster": "web_cluster", "env": "qa" },
-    { "hostname": "qa-web-02", "cluster": "web_cluster", "env": "qa" },
-    { "hostname": "qa-api-01", "cluster": "api_cluster", "env": "qa" },
-    { "hostname": "qa-api-02", "cluster": "api_cluster", "env": "qa" },
-    { "hostname": "qa-api-03", "cluster": "api_cluster", "env": "qa" },
-    { "hostname": "qa-db-01", "cluster": "standalone", "env": "qa" },
-    { "hostname": "qa-jump-01", "cluster": "standalone", "env": "qa" },
-    { "hostname": "qa-worker-01", "cluster": "standalone", "env": "qa" },
-    { "hostname": "qa-worker-02", "cluster": "standalone", "env": "qa" },
-    { "hostname": "qa-tools-01", "cluster": "standalone", "env": "qa" }
+    { "hostname": "itweb01a-t", "cluster": "web_cluster", "env": "qa" },
+    { "hostname": "itweb01b-t", "cluster": "web_cluster", "env": "qa" },
+
+    { "hostname": "itapi01a-t", "cluster": "api_cluster", "env": "qa" },
+    { "hostname": "itapi01b-t", "cluster": "api_cluster", "env": "qa" },
+    { "hostname": "itapi01c-t", "cluster": "api_cluster", "env": "qa" },
+
+    { "hostname": "itdb01-t", "cluster": "standalone", "env": "qa" },
+    { "hostname": "itjump01-t", "cluster": "standalone", "env": "qa" },
+    { "hostname": "itwrk01-t", "cluster": "standalone", "env": "qa" },
+    { "hostname": "itwrk02-t", "cluster": "standalone", "env": "qa" },
+    { "hostname": "ittools01-t", "cluster": "standalone", "env": "qa" }
   ],
   "clusters": [
-    { "name": "api_cluster", "nodes": 3, "hosts": ["qa-api-01", "qa-api-02", "qa-api-03"] },
-    { "name": "web_cluster", "nodes": 2, "hosts": ["qa-web-01", "qa-web-02"] }
+    { "name": "api_cluster", "nodes": 3, "hosts": ["itapi01a-t", "itapi01b-t", "itapi01c-t"] },
+    { "name": "web_cluster", "nodes": 2, "hosts": ["itweb01a-t", "itweb01b-t"] }
   ]
 }

@@ -560,6 +560,19 @@ export default function MachinePage({ params, searchParams }: MachinePageProps) 
                 </section>
               </section>
             )}
+            {activeTab === 'capabilities' && (
+              <section className="space-y-4">
+                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                  {capabilityCards.map((card) => (
+                    <article key={card.title} className="rounded-md border border-slate-200 bg-white p-5 shadow-sm">
+                      <h3 className="text-2xl font-semibold text-slate-800">{card.title}</h3>
+                      <p className="mt-3 text-base text-slate-600">{card.description}</p>
+                      <p className="mt-6 text-sm text-slate-700">● {card.state}</p>
+                    </article>
+                  ))}
+                </div>
+              </section>
+            )}
 
               </>
             )}
