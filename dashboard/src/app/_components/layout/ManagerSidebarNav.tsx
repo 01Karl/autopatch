@@ -80,20 +80,6 @@ const NAV_SECTIONS: NavSection[] = [
     ],
   },
   {
-    title: 'Configure',
-    items: [
-      { key: 'configure-playbooks', label: 'Playbooks', icon: FiTool, href: (env) => `/configure/playbooks?env=${env}` },
-      {
-        key: 'configure-ansible',
-        label: 'Ansible',
-        icon: FiLayers,
-        children: [
-          { key: 'configure-roles-variables', label: 'Roles & Variables', href: (env) => `/configure/ansible/roles-variables?env=${env}` },
-        ],
-      },
-    ],
-  },
-  {
     title: 'Machines',
     items: [
       {
@@ -131,21 +117,6 @@ const NAV_SECTIONS: NavSection[] = [
     ],
   },
   {
-    title: 'Configuration',
-    items: [
-      {
-        key: 'configuration',
-        label: 'Configuration',
-        icon: FiSettings,
-        children: [
-          { key: 'configuration-locations', label: 'Locations', href: (env) => `/configuration/locations?env=${env}` },
-          { key: 'configuration-organizations', label: 'Organizations', href: (env) => `/configuration/organizations?env=${env}` },
-          { key: 'configuration-settings', label: 'Settings', href: (env) => `/configuration/settings?env=${env}` },
-        ],
-      },
-    ],
-  },
-  {
     title: 'Content',
     items: [
       { key: 'content-products', label: 'Products', icon: FiPackage, href: (env) => `/content/products?env=${env}` },
@@ -159,6 +130,24 @@ const NAV_SECTIONS: NavSection[] = [
           { key: 'content-lifecycle-environments', label: 'Lifecycle environments', href: (env) => `/content/lifecycle/environments?env=${env}` },
           { key: 'content-content-views', label: 'Content views', href: (env) => `/content/lifecycle/content-views?env=${env}` },
           { key: 'content-activation-keys', label: 'Activation Keys', href: (env) => `/content/lifecycle/activation-keys?env=${env}` },
+        ],
+      },
+    ],
+  },
+  {
+    title: 'Configuration',
+    items: [
+      {
+        key: 'configuration',
+        label: 'Configuration',
+        icon: FiSettings,
+        children: [
+          { key: 'configure-playbooks', label: 'Playbooks', href: (env) => `/configure/playbooks?env=${env}` },
+          { key: 'configure-ansible', label: 'Ansible', href: (env) => `/configure/ansible?env=${env}` },
+          { key: 'configure-roles-variables', label: 'Roles & Variables', href: (env) => `/configure/ansible/roles-variables?env=${env}` },
+          { key: 'configuration-locations', label: 'Locations', href: (env) => `/configuration/locations?env=${env}` },
+          { key: 'configuration-organizations', label: 'Organizations', href: (env) => `/configuration/organizations?env=${env}` },
+          { key: 'configuration-settings', label: 'Settings', href: (env) => `/configuration/settings?env=${env}` },
         ],
       },
     ],
@@ -245,6 +234,8 @@ export default function ManagerSidebarNav({ activeView, selectedEnv, selectedBas
                         {child.key === 'machines-register' && <FiFileText className="h-3.5 w-3.5" />}
                         {child.key === 'machines-all' && <FiMonitor className="h-3.5 w-3.5" />}
                         {child.key.startsWith('compliance-') && <FiSliders className="h-3.5 w-3.5" />}
+                        {child.key === 'configure-playbooks' && <FiTool className="h-3.5 w-3.5" />}
+                        {child.key === 'configure-ansible' && <FiLayers className="h-3.5 w-3.5" />}
                         {child.key === 'configure-roles-variables' && <FiLayers className="h-3.5 w-3.5" />}
                         {child.key.startsWith('provisioning-') && <FiCpu className="h-3.5 w-3.5" />}
                         {child.key === 'configuration-locations' && <FiMapPin className="h-3.5 w-3.5" />}

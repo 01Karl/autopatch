@@ -212,7 +212,7 @@ export default function HomePage({ searchParams }: { searchParams?: DashboardSea
   return (
     <main className="azure-shell">
       <header className="top-header">
-        <div className="brand">Overseer Console</div>
+        <div className="brand">Overseer Infrastructure Manager</div>
         <input className="header-search" placeholder="Search resources, services and docs" />
         <div className="header-user">
           <span>{session?.username || 'Okänd användare'}</span>
