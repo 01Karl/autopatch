@@ -1,5 +1,7 @@
 import db from '@/lib/db';
-import { loadInventorySummary } from '@/lib/inventory';
+import { loadInventorySummary, type InventorySummary } from '@/lib/inventory';
+import type { IconType } from 'react-icons';
+import { FiBarChart2, FiClock, FiHome, FiMonitor, FiPlayCircle, FiRefreshCw, FiServer } from 'react-icons/fi';
 
 type RunRow = {
   id: number;
@@ -24,15 +26,37 @@ type ScheduleRow = {
   enabled: number;
 };
 
-const ENV_OPTIONS = ['prod', 'qa', 'dev'] as const;
+type NavKey = 'overview' | 'get-started' | 'machines' | 'history' | 'update-reports';
+
+type NavItem = {
+  key: NavKey;
+  label: string;
+  icon: IconType;
+};
+
+type MachineRow = {
+  name: string;
+  env: string;
+  updateStatus: string;
+  platform: string;
+  distribution: string;
+  resourceType: string;
+  patchOrchestration: string;
+  periodicAssessment: string;
+  associatedSchedules: string;
+  powerState: string;
+};
+
+const INVENTORY_ENVS = ['prod', 'qa', 'dev'] as const;
+const ENV_OPTIONS = ['all', ...INVENTORY_ENVS] as const;
 const DEFAULT_BASE_PATH = 'environments';
-const NAV_ITEMS = [
-  { key: 'overview', label: 'Overview', icon: '◈' },
-  { key: 'get-started', label: 'Get started', icon: '✦' },
-  { key: 'machines', label: 'Machines', icon: '🖥' },
-  { key: 'history', label: 'History', icon: '🕘' },
-  { key: 'update-reports', label: 'Update reports', icon: '📊' },
-] as const;
+const NAV_ITEMS: NavItem[] = [
+  { key: 'overview', label: 'Overview', icon: FiHome },
+  { key: 'get-started', label: 'Get started', icon: FiPlayCircle },
+  { key: 'machines', label: 'Machines', icon: FiMonitor },
+  { key: 'history', label: 'History', icon: FiClock },
+  { key: 'update-reports', label: 'Update reports', icon: FiBarChart2 },
+];
 
 function pct(ok: number, total: number) {
   return total ? ((ok / total) * 100).toFixed(1) : '0.0';
@@ -63,6 +87,31 @@ function machineStatusText(status: string) {
 
 type DashboardSearchParams = { env?: string; view?: string; basePath?: string; resourceType?: string; distribution?: string; platform?: string };
 
+function mergeInventories(env: string, basePath: string) {
+  const inventoryEnvs = env === 'all' ? INVENTORY_ENVS : [env as (typeof INVENTORY_ENVS)[number]];
+  const inventoryByEnv = inventoryEnvs.map((inventoryEnv) => loadInventorySummary(inventoryEnv, basePath));
+
+  const merged: InventorySummary = {
+    env,
+    inventory_path:
+      env === 'all'
+        ? `${basePath}/{${INVENTORY_ENVS.join(',')}}/inventory`
+        : inventoryByEnv[0]?.inventory_path ?? `${basePath}/${env}/inventory`,
+    server_count: inventoryByEnv.reduce((sum, item) => sum + item.server_count, 0),
+    cluster_count: inventoryByEnv.reduce((sum, item) => sum + item.cluster_count, 0),
+    servers: inventoryByEnv.flatMap((item) => item.servers.map((server) => ({ ...server, env: server.env || item.env }))),
+    clusters: inventoryByEnv.flatMap((item) => item.clusters),
+    source: inventoryByEnv.every((item) => item.source === 'fixture')
+      ? 'fixture'
+      : inventoryByEnv.every((item) => item.source === 'ansible')
+        ? 'ansible'
+        : undefined,
+    error: inventoryByEnv.map((item) => item.error).filter(Boolean).join(' | ') || undefined,
+  };
+
+  return { merged, inventoryByEnv };
+}
+
 export default function HomePage({ searchParams }: { searchParams?: DashboardSearchParams }) {
   const linuxDistributions = ['Ubuntu', 'Debian', 'RHEL', 'Rocky Linux', 'SUSE Linux Enterprise', 'AlmaLinux'] as const;
   const unixDistributions = ['AIX', 'Solaris'] as const;
@@ -72,7 +121,7 @@ export default function HomePage({ searchParams }: { searchParams?: DashboardSea
     ? (searchParams?.env as (typeof ENV_OPTIONS)[number])
     : 'prod';
   const selectedBasePath = searchParams?.basePath || DEFAULT_BASE_PATH;
-  const activeView = NAV_ITEMS.some((item) => item.key === searchParams?.view) ? searchParams?.view || 'overview' : 'overview';
+  const activeView = NAV_ITEMS.some((item) => item.key === searchParams?.view) ? (searchParams?.view as NavKey) : 'overview';
   const selectedResourceType = searchParams?.resourceType || 'all';
   const selectedDistribution = searchParams?.distribution || 'all';
   const selectedPlatform = searchParams?.platform || 'all';
@@ -80,9 +129,9 @@ export default function HomePage({ searchParams }: { searchParams?: DashboardSea
   const runs = db.prepare('SELECT * FROM runs ORDER BY id DESC LIMIT 50').all() as RunRow[];
   const schedules = db.prepare('SELECT id,name,env,day_of_week,time_hhmm,enabled FROM schedules ORDER BY id DESC').all() as ScheduleRow[];
   const latestRun = runs[0];
-  const envRuns = runs.filter((run) => run.env === selectedEnv);
+  const envRuns = selectedEnv === 'all' ? runs : runs.filter((run) => run.env === selectedEnv);
   const latestEnvRun = envRuns[0];
-  const inventory = loadInventorySummary(selectedEnv, selectedBasePath);
+  const { merged: inventory, inventoryByEnv } = mergeInventories(selectedEnv, selectedBasePath);
 
   const totals = envRuns.reduce(
     (acc, run) => {
@@ -98,9 +147,9 @@ export default function HomePage({ searchParams }: { searchParams?: DashboardSea
   const pendingRuns = envRuns.filter((run) => run.status === 'queued' || run.status === 'running').length;
   const completedRuns = envRuns.filter((run) => run.status === 'completed' || run.status === 'OK').length;
   const failedRuns = envRuns.filter((run) => run.status === 'failed' || run.status === 'FAILED').length;
-  const envSchedules = schedules.filter((schedule) => schedule.env === selectedEnv);
+  const envSchedules = selectedEnv === 'all' ? schedules : schedules.filter((schedule) => schedule.env === selectedEnv);
 
-  const machineRows = inventory.servers.map((server, idx) => {
+  const machineRows: MachineRow[] = inventory.servers.map((server, idx) => {
     const platform = idx % 9 === 0 ? 'FreeBSD' : idx % 7 === 0 ? 'Unix' : 'Linux';
     const distribution =
       platform === 'FreeBSD'
@@ -109,15 +158,18 @@ export default function HomePage({ searchParams }: { searchParams?: DashboardSea
           ? unixDistributions[idx % unixDistributions.length]
           : linuxDistributions[idx % linuxDistributions.length];
 
+    const scheduleForEnv = schedules.find((schedule) => schedule.env === server.env)?.name ?? '-';
+
     return {
       name: server.hostname,
+      env: server.env,
       updateStatus: machineStatusText(statusLabel(latestEnvRun?.status ?? 'pending')),
       platform,
       distribution,
       resourceType: server.cluster === 'standalone' ? 'Bare metal server' : 'Virtual machine',
       patchOrchestration: server.cluster === 'standalone' ? 'Native package manager' : 'Agent managed rollout',
       periodicAssessment: idx % 2 === 0 ? 'Yes' : 'No',
-      associatedSchedules: envSchedules[0]?.name ?? '-',
+      associatedSchedules: scheduleForEnv,
       powerState: idx % 4 === 0 ? 'VM running' : 'VM deallocated',
     };
   });
@@ -153,23 +205,25 @@ export default function HomePage({ searchParams }: { searchParams?: DashboardSea
         <aside className="side-nav">
           <input className="side-search" placeholder="Search" />
           <p className="side-title">Navigation</p>
-          {NAV_ITEMS.map((item) => (
-            <a
-              key={item.key}
-              href={`/?env=${selectedEnv}&view=${item.key}&basePath=${selectedBasePath}`}
-              className={`side-link ${activeView === item.key ? 'active' : ''}`}
-            >
-              <span className="side-icon">{item.icon}</span>
-              <span>{item.label}</span>
-            </a>
-          ))}
-
+          {NAV_ITEMS.map((item) => {
+            const NavIcon = item.icon;
+            return (
+              <a
+                key={item.key}
+                href={`/?env=${selectedEnv}&view=${item.key}&basePath=${selectedBasePath}`}
+                className={`side-link ${activeView === item.key ? 'active' : ''}`}
+              >
+                <span className="side-icon"><NavIcon /></span>
+                <span>{item.label}</span>
+              </a>
+            );
+          })}
         </aside>
 
         <section className="main-pane">
           <section className="command-bar">
             <div className="command-left">
-              <button className="ghost-btn" type="button">↻ Refresh</button>
+              <button className="ghost-btn" type="button"><FiRefreshCw /> Refresh</button>
               <button className="ghost-btn" type="button">Check for updates</button>
               <button className="ghost-btn" type="button">One-time update</button>
             </div>
@@ -191,7 +245,7 @@ export default function HomePage({ searchParams }: { searchParams?: DashboardSea
               <h1 className="text-3xl font-semibold">OpenPatch Update Manager</h1>
               <p className="mt-1 text-sm text-slate-500">Läser från {selectedBasePath}/{selectedEnv}/inventory via Python-integration.</p>
               {inventory.error && <p className="mt-2 text-sm text-rose-700">Inventory-fel: {inventory.error}</p>}
-              {inventory.source === 'fixture' && <p className="mt-2 text-sm text-amber-700">Visar fejkdata från JSON-fixtures för snabb UI-test.</p>}
+              {inventoryByEnv.some((item) => item.source === 'fixture') && <p className="mt-2 text-sm text-amber-700">Visar fejkdata från JSON-fixtures för snabb UI-test.</p>}
             </div>
 
             {activeView === 'overview' && (
@@ -267,7 +321,7 @@ export default function HomePage({ searchParams }: { searchParams?: DashboardSea
                     <label className="text-xs text-slate-500">Environment
                       <select className="mt-1 w-full rounded-md border border-slate-300 bg-white px-2 py-1 text-sm" name="env" defaultValue={selectedEnv}>
                         {ENV_OPTIONS.map((env) => (
-                          <option key={env} value={env}>{env.toUpperCase()}</option>
+                          <option key={env} value={env}>{env === 'all' ? 'All environments' : env.toUpperCase()}</option>
                         ))}
                       </select>
                     </label>
@@ -305,11 +359,21 @@ export default function HomePage({ searchParams }: { searchParams?: DashboardSea
                         </tr>
                       </thead>
                       <tbody>
-                        {filteredMachineRows.map((row) => (
-                          <tr key={row.name}>
-                            <td><a className="link" href={`/machines/${encodeURIComponent(row.name)}?env=${selectedEnv}&basePath=${selectedBasePath}`}>{row.name}</a></td><td>{row.updateStatus}</td><td>{row.platform}</td><td>{row.distribution}</td><td>{row.resourceType}</td><td>{row.patchOrchestration}</td><td>{row.periodicAssessment}</td><td>{row.associatedSchedules}</td><td>{row.powerState}</td>
-                          </tr>
-                        ))}
+                        {filteredMachineRows.map((row) => {
+                          const NameIcon = row.resourceType === 'Virtual machine' ? FiMonitor : FiServer;
+                          return (
+                            <tr key={`${row.env}-${row.name}`}>
+                              <td>
+                                <span className="machine-name-cell">
+                                  <NameIcon className="machine-name-icon" />
+                                  <a className="link" href={`/machines/${encodeURIComponent(row.name)}?env=${row.env}&basePath=${selectedBasePath}`}>{row.name}</a>
+                                  {selectedEnv === 'all' && <span className="machine-env-chip">{row.env.toUpperCase()}</span>}
+                                </span>
+                              </td>
+                              <td>{row.updateStatus}</td><td>{row.platform}</td><td>{row.distribution}</td><td>{row.resourceType}</td><td>{row.patchOrchestration}</td><td>{row.periodicAssessment}</td><td>{row.associatedSchedules}</td><td>{row.powerState}</td>
+                            </tr>
+                          );
+                        })}
                         {filteredMachineRows.length === 0 && <tr><td colSpan={9} className="text-slate-500">No machines found with selected filters.</td></tr>}
                       </tbody>
                     </table>
@@ -345,9 +409,11 @@ export default function HomePage({ searchParams }: { searchParams?: DashboardSea
                     <table className="w-full text-sm">
                       <thead><tr><th>Cluster</th><th>Nodes</th><th>Env</th></tr></thead>
                       <tbody>
-                        {inventory.clusters.map((cluster) => (
-                          <tr key={cluster.name}><td>{cluster.name}</td><td>{cluster.nodes}</td><td>{selectedEnv}</td></tr>
-                        ))}
+                        {inventoryByEnv.flatMap((envInventory) =>
+                          envInventory.clusters.map((cluster) => (
+                            <tr key={`${envInventory.env}-${cluster.name}`}><td>{cluster.name}</td><td>{cluster.nodes}</td><td>{envInventory.env}</td></tr>
+                          ))
+                        )}
                         {inventory.clusters.length === 0 && <tr><td colSpan={3} className="text-slate-500">No cluster groups found (*_cluster).</td></tr>}
                       </tbody>
                     </table>
