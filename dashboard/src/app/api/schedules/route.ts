@@ -9,7 +9,7 @@ export async function POST(req: Request) {
   ).run(
     String(form.get('name') || 'schema'),
     String(form.get('env') || 'qa'),
-    String(form.get('basePath') || '../../../Ansible/environments'),
+    String(form.get('basePath') || 'environments'),
     form.get('dryRun') === '1' ? 1 : 0,
     Number(form.get('maxWorkers') || 2),
     Number(form.get('probeTimeout') || 5),
