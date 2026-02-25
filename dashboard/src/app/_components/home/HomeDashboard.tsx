@@ -32,6 +32,7 @@ type ScheduleRow = {
 };
 
 type NavKey = 'overview' | 'get-started' | 'playbooks' | 'machines' | 'history' | 'update-reports';
+type OverviewTabKey = 'fleet' | 'automation' | 'platforms' | 'operations';
 
 type ServiceAccountRow = {
   id: number;
@@ -124,6 +125,7 @@ type DashboardSearchParams = {
   routineSerial?: string;
   elSecurityOnly?: string;
   routineTemplate?: string;
+  overviewTab?: string;
 };
 
 
@@ -142,6 +144,9 @@ export default function HomePage({ searchParams }: { searchParams?: DashboardSea
   const selectedDistribution = searchParams?.distribution || 'all';
   const selectedPlatform = searchParams?.platform || 'all';
   const selectedCluster = searchParams?.cluster || 'all';
+  const overviewTab: OverviewTabKey = ['fleet', 'automation', 'platforms', 'operations'].includes(searchParams?.overviewTab || '')
+    ? (searchParams?.overviewTab as OverviewTabKey)
+    : 'fleet';
 
   const runs = db.prepare('SELECT * FROM runs ORDER BY id DESC LIMIT 50').all() as RunRow[];
   const schedules = db.prepare('SELECT id,name,env,day_of_week,time_hhmm,enabled FROM schedules ORDER BY id DESC').all() as ScheduleRow[];
@@ -210,6 +215,13 @@ export default function HomePage({ searchParams }: { searchParams?: DashboardSea
     return platformMatch && distributionMatch && resourceTypeMatch && clusterMatch;
   });
 
+  const linuxCount = machineRows.filter((row) => row.platform === 'Linux').length;
+  const unixCount = machineRows.filter((row) => row.platform === 'Unix').length;
+  const freebsdCount = machineRows.filter((row) => row.platform === 'FreeBSD').length;
+  const withAssessmentCount = machineRows.filter((row) => row.periodicAssessment === 'Yes').length;
+  const automationCoverage = machineRows.length ? Math.round((withAssessmentCount / machineRows.length) * 100) : 0;
+  const managedBySchedules = machineRows.filter((row) => row.associatedSchedules !== '-').length;
+
   const routineTemplate = searchParams?.routineTemplate || playbookRoutines[0]?.key || 'linux-standard';
   const routineName = searchParams?.routineName || 'Patch Linux servers (EL & Debian)';
   const routineHosts = searchParams?.routineHosts || (selectedCluster !== 'all' ? selectedCluster : 'all');
@@ -242,10 +254,10 @@ export default function HomePage({ searchParams }: { searchParams?: DashboardSea
         <div className="shell-page-breadcrumbs">
           <a href="/">Home</a>
           <span>›</span>
-          <span>Overseer Update Manager</span>
+          <span>Overseer Infrastructure Manager</span>
         </div>
-        <h1 className="shell-page-title">Overseer Update Manager</h1>
-        <p className="shell-page-subtitle">Standard overview and update controls for selected environment.</p>
+        <h1 className="shell-page-title">Overseer Infrastructure Manager</h1>
+        <p className="shell-page-subtitle">Översikt för Linux, Unix och FreeBSD med driftläge, automation och operativa signaler.</p>
       </section>
 
       <div className="shell-layout">
@@ -277,12 +289,12 @@ export default function HomePage({ searchParams }: { searchParams?: DashboardSea
         </aside>
 
         <section className="main-pane">
-          <p className="pane-context-text">Standard workflow · Review overview, run checks and trigger updates from the command bar.</p>
+          <p className="pane-context-text">Operations workflow · Följ fleet-hälsa, automation och plattformsstatus från en samlad översikt.</p>
           <section className="command-bar">
             <div className="command-left">
               <button className="ghost-btn" type="button"><FiRefreshCw /> Refresh</button>
-              <button className="ghost-btn" type="button">Check for updates</button>
-              <button className="ghost-btn" type="button">One-time update</button>
+              <button className="ghost-btn" type="button">Inventory sync</button>
+              <button className="ghost-btn" type="button">Run compliance scan</button>
             </div>
             <div className="command-right">
               <a className="ghost-btn" href={csvHref} download="autopatch-runs.csv">Export to CSV</a>
@@ -291,7 +303,7 @@ export default function HomePage({ searchParams }: { searchParams?: DashboardSea
           </section>
 
           <section className="tabs-row">
-            <span className="tab active">Overseer Update Manager</span>
+            <span className="tab active">Overseer Infrastructure Manager</span>
             <span className="tab">Environment: {selectedEnv.toUpperCase()}</span>
             <span className="tab">Inventory: {inventory.inventory_path}</span>
             <span className="tab">Source: {inventory.source ?? 'ansible'}</span>
@@ -307,32 +319,67 @@ export default function HomePage({ searchParams }: { searchParams?: DashboardSea
 
             {activeView === 'overview' && (
               <>
+                <section className="tabs-row">
+                  <a href={`/?env=${selectedEnv}&view=overview&overviewTab=fleet&basePath=${selectedBasePath}`} className={`tab ${overviewTab === 'fleet' ? 'active' : ''}`}>Fleet status</a>
+                  <a href={`/?env=${selectedEnv}&view=overview&overviewTab=automation&basePath=${selectedBasePath}`} className={`tab ${overviewTab === 'automation' ? 'active' : ''}`}>Automation</a>
+                  <a href={`/?env=${selectedEnv}&view=overview&overviewTab=platforms&basePath=${selectedBasePath}`} className={`tab ${overviewTab === 'platforms' ? 'active' : ''}`}>Platform coverage</a>
+                  <a href={`/?env=${selectedEnv}&view=overview&overviewTab=operations&basePath=${selectedBasePath}`} className={`tab ${overviewTab === 'operations' ? 'active' : ''}`}>Operations backlog</a>
+                </section>
+
                 <div className="kpi-grid">
-                  <article className="kpi-card"><p className="kpi-title">Total machines</p><p className="kpi-value">{inventory.server_count}</p></article>
-                  <article className="kpi-card"><p className="kpi-title">No updates data</p><p className="kpi-value">{Math.max(inventory.server_count - totals.targets, 0)}</p></article>
-                  <article className="kpi-card"><p className="kpi-title">No pending updates</p><p className="kpi-value text-emerald-700">{totals.ok}</p></article>
-                  <article className="kpi-card"><p className="kpi-title">Pending updates</p><p className="kpi-value text-amber-700">{pendingRuns}</p></article>
-                  <article className="kpi-card"><p className="kpi-title">Unsupported</p><p className="kpi-value text-rose-700">{failedRuns}</p></article>
+                  <article className="kpi-card"><p className="kpi-title">Managed nodes</p><p className="kpi-value">{inventory.server_count}</p></article>
+                  <article className="kpi-card"><p className="kpi-title">Linux / Unix / FreeBSD</p><p className="kpi-value">{linuxCount} / {unixCount} / {freebsdCount}</p></article>
+                  <article className="kpi-card"><p className="kpi-title">Automation coverage</p><p className="kpi-value text-emerald-700">{automationCoverage}%</p></article>
+                  <article className="kpi-card"><p className="kpi-title">Queued or running jobs</p><p className="kpi-value text-amber-700">{pendingRuns}</p></article>
+                  <article className="kpi-card"><p className="kpi-title">Failed workflows</p><p className="kpi-value text-rose-700">{failedRuns}</p></article>
                 </div>
 
                 <section className="panel-grid">
                   <article className="panel-card">
-                    <div className="panel-head"><h2>Update status of machines</h2></div>
+                    <div className="panel-head"><h2>{overviewTab === 'fleet' ? 'Fleet health' : overviewTab === 'automation' ? 'Automation readiness' : overviewTab === 'platforms' ? 'Platform distribution' : 'Operational posture'}</h2></div>
                     <div className="status-layout">
                       <div className="donut-wrap"><div className="donut" style={donutStyle}><div className="donut-inner"><strong>{inventory.server_count}</strong><span>Machines</span></div></div></div>
                       <div className="stat-list">
-                        <p><span>Pending updates</span><strong>{pendingRuns}</strong></p>
-                        <p><span>No pending updates</span><strong>{completedRuns}</strong></p>
-                        <p><span>Unsupported</span><strong>{failedRuns}</strong></p>
-                        <p><span>Compliance rate</span><strong>{pct(totals.ok, totals.targets)}%</strong></p>
+                        {overviewTab === 'fleet' && (
+                          <>
+                            <p><span>Healthy recent runs</span><strong>{completedRuns}</strong></p>
+                            <p><span>Queued/running</span><strong>{pendingRuns}</strong></p>
+                            <p><span>Failed</span><strong>{failedRuns}</strong></p>
+                            <p><span>Compliance rate</span><strong>{pct(totals.ok, totals.targets)}%</strong></p>
+                          </>
+                        )}
+                        {overviewTab === 'automation' && (
+                          <>
+                            <p><span>With periodic assessment</span><strong>{withAssessmentCount}</strong></p>
+                            <p><span>Connected to schedule</span><strong>{managedBySchedules}</strong></p>
+                            <p><span>Available schedules</span><strong>{envSchedules.length}</strong></p>
+                            <p><span>Playbook routines</span><strong>{playbookRoutines.length}</strong></p>
+                          </>
+                        )}
+                        {overviewTab === 'platforms' && (
+                          <>
+                            <p><span>Linux hosts</span><strong>{linuxCount}</strong></p>
+                            <p><span>Unix hosts</span><strong>{unixCount}</strong></p>
+                            <p><span>FreeBSD hosts</span><strong>{freebsdCount}</strong></p>
+                            <p><span>Distinct distributions</span><strong>{distributionOptions.length - 1}</strong></p>
+                          </>
+                        )}
+                        {overviewTab === 'operations' && (
+                          <>
+                            <p><span>Pending jobs</span><strong>{pendingRuns}</strong></p>
+                            <p><span>Nodes missing assessment</span><strong>{machineRows.length - withAssessmentCount}</strong></p>
+                            <p><span>Nodes without schedule</span><strong>{machineRows.length - managedBySchedules}</strong></p>
+                            <p><span>Failure ratio</span><strong>{pct(failedRuns, Math.max(envRuns.length, 1))}%</strong></p>
+                          </>
+                        )}
                       </div>
                     </div>
                   </article>
 
                   <article className="panel-card">
-                    <div className="panel-head"><h2>Patch installation status</h2><span className="chip">Last 30 days</span></div>
+                    <div className="panel-head"><h2>Run execution summary</h2><span className="chip">Last 30 days</span></div>
                     <div className="stat-list">
-                      <p><span>Total installation runs</span><strong>{envRuns.length}</strong></p>
+                      <p><span>Total workflow runs</span><strong>{envRuns.length}</strong></p>
                       <p><span>Completed</span><strong>{completedRuns}</strong></p>
                       <p><span>Failed</span><strong>{failedRuns}</strong></p>
                       <p><span>In progress</span><strong>{pendingRuns}</strong></p>
