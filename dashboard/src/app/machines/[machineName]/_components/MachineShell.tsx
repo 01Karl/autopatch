@@ -1,4 +1,5 @@
 import { ReactNode } from 'react';
+import LinkTabs from '@/app/_components/ui/LinkTabs';
 import { FiActivity, FiArrowLeft, FiBox, FiCheckCircle, FiClock, FiCpu, FiDatabase, FiFileText, FiHardDrive, FiKey, FiLock, FiRefreshCw, FiSettings, FiShield, FiSliders, FiTool, FiUser } from 'react-icons/fi';
 import { ContentTab, MachineSection } from '../_lib/machine-data';
 
@@ -169,34 +170,34 @@ export default function MachineShell({
             {activeSection === 'updates' && (
               <>
                 <p className="pane-context-text">Update content views · switch between package-, errata- och repositoryfokuserade vyer.</p>
-                <section className="machine-actions-row">
-                  {updatesTabs.map((tab) => (
-                    <a
-                      key={tab.id}
-                      className={`machine-content-tab ${contentTab === tab.id ? 'active' : ''}`}
-                      href={`${machineBasePath}/updates?${machineQuery}&content=${tab.id}`}
-                    >
-                      {tab.label}
-                    </a>
-                  ))}
-                </section>
+                <LinkTabs
+                  activeKey={contentTab ?? 'packages'}
+                  containerClassName="machine-actions-row"
+                  baseTabClassName="machine-content-tab"
+                  activeTabClassName="active"
+                  tabs={updatesTabs.map((tab) => ({
+                    key: tab.id,
+                    label: tab.label,
+                    href: `${machineBasePath}/updates?${machineQuery}&content=${tab.id}`,
+                  }))}
+                />
               </>
             )}
 
             {activeSection === 'logs' && (
               <>
                 <p className="pane-context-text">Log analysis workflow · välj loggfil, filtrera signaler och sortera fynd för snabb triagering.</p>
-                <section className="machine-actions-row">
-                  {logsTabs.map((tab) => (
-                    <a
-                      key={tab.id}
-                      className={`machine-content-tab ${logView === tab.id ? 'active' : ''}`}
-                      href={`${machineBasePath}/logs?${machineQuery}&logView=${tab.id}`}
-                    >
-                      {tab.label}
-                    </a>
-                  ))}
-                </section>
+                <LinkTabs
+                  activeKey={logView ?? 'overview'}
+                  containerClassName="machine-actions-row"
+                  baseTabClassName="machine-content-tab"
+                  activeTabClassName="active"
+                  tabs={logsTabs.map((tab) => ({
+                    key: tab.id,
+                    label: tab.label,
+                    href: `${machineBasePath}/logs?${machineQuery}&logView=${tab.id}`,
+                  }))}
+                />
               </>
             )}
 

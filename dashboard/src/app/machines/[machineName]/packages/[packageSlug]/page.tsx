@@ -1,3 +1,4 @@
+import LinkTabs from '@/app/_components/ui/LinkTabs';
 import MachineShell from '../../_components/MachineShell';
 import { getMachineContext, getPackageBySlug, MachinePageSearchParams, PackageTab } from '../../_lib/machine-data';
 
@@ -37,17 +38,17 @@ export default function MachinePackagePage({ params, searchParams }: Props) {
           <p className="text-sm text-slate-500">Package information for {packageItem.name} on {context.machineName}.</p>
         </div>
 
-        <section className="machine-content-tabs">
-          {packageTabs.map((tab) => (
-            <a
-              key={tab.key}
-              className={`machine-content-tab ${context.packageTab === tab.key ? 'active' : ''}`}
-              href={`${context.machineBasePath}/packages/${encodeURIComponent(packageItem.slug)}?${context.machineQuery}&content=packages&packageTab=${tab.key}`}
-            >
-              {tab.label}
-            </a>
-          ))}
-        </section>
+        <LinkTabs
+          activeKey={context.packageTab}
+          containerClassName="machine-content-tabs"
+          baseTabClassName="machine-content-tab"
+          activeTabClassName="active"
+          tabs={packageTabs.map((tab) => ({
+            key: tab.key,
+            label: tab.label,
+            href: `${context.machineBasePath}/packages/${encodeURIComponent(packageItem.slug)}?${context.machineQuery}&content=packages&packageTab=${tab.key}`,
+          }))}
+        />
 
         {context.packageTab === 'details' && (
           <section className="grid gap-4 md:grid-cols-2">
