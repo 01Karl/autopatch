@@ -159,6 +159,7 @@ export default function HomePage({ searchParams }: { searchParams?: { env?: stri
             <span className="tab active">Azure Update Manager</span>
             <span className="tab">Environment: {selectedEnv.toUpperCase()}</span>
             <span className="tab">Inventory: {inventory.inventory_path}</span>
+            <span className="tab">Source: {inventory.source ?? 'ansible'}</span>
           </section>
 
           <section className="content-area space-y-5">
@@ -166,6 +167,7 @@ export default function HomePage({ searchParams }: { searchParams?: { env?: stri
               <h1 className="text-3xl font-semibold">Azure Update Manager</h1>
               <p className="mt-1 text-sm text-slate-500">Läser från {selectedBasePath}/{selectedEnv}/inventory via Python-integration.</p>
               {inventory.error && <p className="mt-2 text-sm text-rose-700">Inventory-fel: {inventory.error}</p>}
+              {inventory.source === 'fixture' && <p className="mt-2 text-sm text-amber-700">Visar fejkdata från JSON-fixtures för snabb UI-test.</p>}
             </div>
 
             {activeView === 'overview' && (
