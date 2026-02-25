@@ -1,6 +1,9 @@
-import type { IconType } from 'react-icons';
-import { FiBarChart2, FiClock, FiCpu, FiGrid, FiHome, FiList, FiMapPin, FiMonitor, FiPlayCircle, FiRefreshCw, FiServer, FiShield, FiUsers } from 'react-icons/fi';
+import { FiCpu, FiMapPin, FiRefreshCw, FiShield, FiUsers } from 'react-icons/fi';
 import { getMockMachines, MachineEnv } from '@/lib/machines';
+import ManagerSidebarNav from '@/app/_components/layout/ManagerSidebarNav';
+import LinkTabs from '@/app/_components/ui/LinkTabs';
+import { AppButton, AppButtonLink, AppLabelButton } from '@/app/_components/ui/AppButton';
+import ColumnVisibilityDrawer, { COLUMN_OPTIONS, type ColumnKey } from './_components/ColumnVisibilityDrawer';
 
 type SearchParams = {
   env?: 'all' | MachineEnv;
@@ -10,65 +13,9 @@ type SearchParams = {
   view?: 'list' | 'grid';
 };
 
-type NavKey = 'overview' | 'get-started' | 'playbooks' | 'machines' | 'history' | 'update-reports';
 type ViewMode = 'list' | 'grid';
 
-type NavItem = {
-  key: NavKey;
-  label: string;
-  icon: IconType;
-};
-
-type NavSection = {
-  title: string;
-  keys: NavKey[];
-};
-
-type ColumnKey =
-  | 'hostname'
-  | 'env'
-  | 'cluster'
-  | 'uuid'
-  | 'role'
-  | 'owner'
-  | 'location'
-  | 'criticality'
-  | 'compliance'
-  | 'osVersion'
-  | 'patchWindow'
-  | 'lastSeen';
-
 const ENV_OPTIONS: Array<'all' | MachineEnv> = ['all', 'prod', 'qa', 'dev'];
-
-const NAV_ITEMS: NavItem[] = [
-  { key: 'overview', label: 'Overview', icon: FiHome },
-  { key: 'get-started', label: 'Get started', icon: FiPlayCircle },
-  { key: 'playbooks', label: 'Playbooks', icon: FiServer },
-  { key: 'machines', label: 'Machines', icon: FiMonitor },
-  { key: 'history', label: 'History', icon: FiClock },
-  { key: 'update-reports', label: 'Update reports', icon: FiBarChart2 }
-];
-
-const NAV_SECTIONS: NavSection[] = [
-  { title: 'Manager', keys: ['overview', 'get-started', 'playbooks'] },
-  { title: 'Machines', keys: ['machines', 'history'] },
-  { title: 'Reports', keys: ['update-reports'] }
-];
-
-const COLUMN_OPTIONS: Array<{ key: ColumnKey; label: string }> = [
-  { key: 'hostname', label: 'Hostname' },
-  { key: 'env', label: 'Env' },
-  { key: 'cluster', label: 'Cluster' },
-  { key: 'uuid', label: 'UUID' },
-  { key: 'role', label: 'Role' },
-  { key: 'owner', label: 'Owner' },
-  { key: 'location', label: 'Location' },
-  { key: 'criticality', label: 'Criticality' },
-  { key: 'compliance', label: 'Compliance' },
-  { key: 'osVersion', label: 'OS' },
-  { key: 'patchWindow', label: 'Patch window' },
-  { key: 'lastSeen', label: 'Last seen' }
-];
 
 function getComplianceStyle(compliance: string): string {
   if (compliance === 'Non-compliant') return 'text-rose-600';
@@ -132,6 +79,11 @@ export default function MachinesPage({ searchParams }: { searchParams?: SearchPa
   const gridParams = new URLSearchParams(baseParams);
   gridParams.set('view', 'grid');
 
+  const pageSectionLabel = 'Machines';
+  const pageTitle = `Overseer - ${pageSectionLabel}`;
+  const pageSubtitle = 'En samlad översikt av maskiner, filter och kolumnval för ett mjukare och tydligare arbetsflöde.';
+  const pageWorkflowText = 'Standard workflow · Granska maskinmetadata, justera vyer och borra vidare till detaljer på ett lugnt och konsekvent sätt.';
+
   return (
     <main className="azure-shell">
       <input id="column-drawer-toggle" type="checkbox" className="peer sr-only" />
@@ -139,50 +91,29 @@ export default function MachinesPage({ searchParams }: { searchParams?: SearchPa
       <header className="top-header">
         <div className="brand">Overseer Console</div>
         <input className="header-search" placeholder="Search resources, services and docs" />
-        <div className="header-user">Machine inventory</div>
+        <div className="header-user">Overseer · {pageSectionLabel}</div>
       </header>
 
       <section className="shell-page-intro">
         <div className="shell-page-breadcrumbs">
           <a href="/">Home</a>
           <span>›</span>
-          <span>Machines</span>
+          <span>{pageSectionLabel}</span>
         </div>
-        <h1 className="shell-page-title">Overseer Update Manager</h1>
-        <p className="shell-page-subtitle">Machine inventory from mock-data with per-host metadata.</p>
+        <h1 className="shell-page-title">{pageTitle}</h1>
+        <p className="shell-page-subtitle">{pageSubtitle}</p>
       </section>
 
       <div className="shell-layout">
-        <aside className="side-nav">
-          <input className="side-search" placeholder="Search" />
-          {NAV_SECTIONS.map((section) => (
-            <section className="side-section" key={section.title}>
-              <p className="side-title">{section.title}</p>
-              {section.keys.map((key) => {
-                const item = NAV_ITEMS.find((navItem) => navItem.key === key);
-                if (!item) return null;
-                const NavIcon = item.icon;
-                const itemHref = item.key === 'machines'
-                  ? `/machines?${baseParams.toString()}`
-                  : `/?env=${selectedEnv}&view=${item.key}&basePath=environments`;
-                return (
-                  <a key={item.key} href={itemHref} className={`side-link ${item.key === 'machines' ? 'active' : ''}`}>
-                    <span className="side-icon"><NavIcon /></span>
-                    <span>{item.label}</span>
-                  </a>
-                );
-              })}
-            </section>
-          ))}
-        </aside>
+        <ManagerSidebarNav activeView="machines" selectedEnv={selectedEnv} selectedBasePath="environments" />
 
         <section className="main-pane">
-          <p className="pane-context-text">Standard workflow · Review machine metadata and drill into individual machine pages.</p>
+          <p className="pane-context-text">{pageWorkflowText}</p>
           <section className="command-bar">
             <div className="command-left">
-              <button className="ghost-btn" type="button"><FiRefreshCw /> Refresh</button>
-              <a className="ghost-btn" href={`/?env=${selectedEnv}&view=overview&basePath=environments`}>Back to overview</a>
-              <label htmlFor="column-drawer-toggle" className="ghost-btn cursor-pointer">Edit columns</label>
+              <AppButton type="button"><FiRefreshCw /> Refresh</AppButton>
+              <AppButtonLink href={`/?env=${selectedEnv}&view=overview&basePath=environments`}>Back to overview</AppButtonLink>
+              <AppLabelButton htmlFor="column-drawer-toggle" className="cursor-pointer">Edit columns</AppLabelButton>
             </div>
           </section>
 
@@ -197,14 +128,16 @@ export default function MachinesPage({ searchParams }: { searchParams?: SearchPa
             <section className="table-card">
               <div className="table-head flex items-center justify-between gap-3">
                 <h2>Machine inventory</h2>
-                <div className="inline-flex items-center rounded-md border border-slate-300 bg-white p-1">
-                  <a href={`/machines?${listParams.toString()}`} className={`inline-flex items-center gap-1 rounded px-2 py-1 text-xs ${selectedView === 'list' ? 'bg-slate-800 text-white' : 'text-slate-600'}`}>
-                    <FiList /> List
-                  </a>
-                  <a href={`/machines?${gridParams.toString()}`} className={`inline-flex items-center gap-1 rounded px-2 py-1 text-xs ${selectedView === 'grid' ? 'bg-slate-800 text-white' : 'text-slate-600'}`}>
-                    <FiGrid /> Grid
-                  </a>
-                </div>
+                <LinkTabs
+                  activeKey={selectedView}
+                  containerClassName="inline-flex items-center rounded-md border border-slate-300 bg-white p-1"
+                  baseTabClassName="inline-flex items-center gap-1 rounded px-2 py-1 text-xs text-slate-600"
+                  activeTabClassName="bg-slate-800 text-white"
+                  tabs={[
+                    { key: 'list', label: 'List', href: `/machines?${listParams.toString()}` },
+                    { key: 'grid', label: 'Grid', href: `/machines?${gridParams.toString()}` },
+                  ]}
+                />
               </div>
 
               <form className="grid gap-3 md:grid-cols-2 xl:grid-cols-4 p-4 border-b border-slate-200" method="get">
@@ -224,9 +157,9 @@ export default function MachinesPage({ searchParams }: { searchParams?: SearchPa
                   </select>
                 </label>
                 <div className="flex flex-wrap gap-2 items-end">
-                  <button className="primary-btn" type="submit">Apply</button>
-                  <a className="ghost-btn" href={`/machines?env=${selectedEnv}`}>Reset</a>
-                  <label htmlFor="column-drawer-toggle" className="ghost-btn cursor-pointer">Edit columns</label>
+                  <AppButton variant="primary" type="submit">Apply</AppButton>
+                  <AppButtonLink href={`/machines?env=${selectedEnv}`}>Reset</AppButtonLink>
+                  <AppLabelButton htmlFor="column-drawer-toggle" className="cursor-pointer">Edit columns</AppLabelButton>
                 </div>
                 {selectedColumns.map((column) => (
                   <input key={column} type="hidden" name="cols" value={column} />
@@ -302,37 +235,14 @@ export default function MachinesPage({ searchParams }: { searchParams?: SearchPa
         </section>
       </div>
 
-      <label htmlFor="column-drawer-toggle" className="fixed inset-0 z-40 bg-slate-900/35 opacity-0 pointer-events-none transition-opacity peer-checked:opacity-100 peer-checked:pointer-events-auto" aria-label="Close column settings" />
+      <ColumnVisibilityDrawer
+        selectedEnv={selectedEnv}
+        selectedCriticality={selectedCriticality}
+        selectedCompliance={selectedCompliance}
+        selectedView={selectedView}
+        selectedColumnSet={selectedColumnSet}
+      />
 
-      <aside className="fixed right-0 top-0 z-50 h-full w-full max-w-sm translate-x-full bg-white shadow-2xl transition-transform duration-300 peer-checked:translate-x-0">
-        <div className="flex items-center justify-between border-b border-slate-200 p-4">
-          <div>
-            <h2 className="text-base font-semibold text-slate-900">Edit visible columns</h2>
-            <p className="text-xs text-slate-500">Choose which fields to show in the machines table.</p>
-          </div>
-          <label htmlFor="column-drawer-toggle" className="ghost-btn cursor-pointer">Close</label>
-        </div>
-
-        <form method="get" action="/machines" className="flex h-[calc(100%-77px)] flex-col justify-between">
-          <div className="space-y-2 overflow-y-auto p-4">
-            {COLUMN_OPTIONS.map((column) => (
-              <label key={column.key} className="flex items-center gap-2 rounded-md border border-slate-200 px-3 py-2 text-sm text-slate-700">
-                <input type="checkbox" name="cols" value={column.key} defaultChecked={selectedColumnSet.has(column.key)} />
-                <span>{column.label}</span>
-              </label>
-            ))}
-            <input type="hidden" name="env" value={selectedEnv} />
-            <input type="hidden" name="criticality" value={selectedCriticality} />
-            <input type="hidden" name="compliance" value={selectedCompliance} />
-            <input type="hidden" name="view" value={selectedView} />
-          </div>
-
-          <div className="flex items-center gap-2 border-t border-slate-200 p-4">
-            <button type="submit" className="primary-btn">Save columns</button>
-            <a className="ghost-btn" href={`/machines?env=${selectedEnv}&criticality=${selectedCriticality}&compliance=${selectedCompliance}&view=${selectedView}`}>Reset columns</a>
-          </div>
-        </form>
-      </aside>
     </main>
   );
 }

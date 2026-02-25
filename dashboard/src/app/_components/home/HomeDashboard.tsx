@@ -4,8 +4,10 @@ import { getFreeIPAConfigPath, getPlaybookRoutines } from '@/lib/config';
 import { getFreeIPAConfig } from '@/lib/freeipa';
 import { cookies } from 'next/headers';
 import { mergeInventories } from '@/lib/inventory';
-import type { IconType } from 'react-icons';
-import { FiBarChart2, FiClock, FiHome, FiMonitor, FiPlayCircle, FiRefreshCw, FiServer } from 'react-icons/fi';
+import { FiRefreshCw } from 'react-icons/fi';
+import ManagerSidebarNav, { isValidManagerNavKey } from '@/app/_components/layout/ManagerSidebarNav';
+import LinkTabs from '@/app/_components/ui/LinkTabs';
+import { AppButton, AppButtonLink } from '@/app/_components/ui/AppButton';
 import { buildPatchRoutineYaml } from '@/app/_lib/playbook-routine';
 
 type RunRow = {
@@ -31,7 +33,6 @@ type ScheduleRow = {
   enabled: number;
 };
 
-type NavKey = 'overview' | 'get-started' | 'playbooks' | 'machines' | 'history' | 'update-reports';
 type OverviewTabKey = 'fleet' | 'automation' | 'platforms' | 'operations';
 
 type ServiceAccountRow = {
@@ -40,17 +41,6 @@ type ServiceAccountRow = {
   purpose: string;
   username: string;
   created_at: string;
-};
-
-type NavItem = {
-  key: NavKey;
-  label: string;
-  icon: IconType;
-};
-
-type NavSection = {
-  title: string;
-  keys: NavKey[];
 };
 
 type MachineRow = {
@@ -70,21 +60,6 @@ type MachineRow = {
 const INVENTORY_ENVS = ['prod', 'qa', 'dev'] as const;
 const ENV_OPTIONS = ['all', ...INVENTORY_ENVS] as const;
 const DEFAULT_BASE_PATH = 'environments';
-const NAV_ITEMS: NavItem[] = [
-  { key: 'overview', label: 'Overview', icon: FiHome },
-  { key: 'get-started', label: 'Get started', icon: FiPlayCircle },
-  { key: 'playbooks', label: 'Playbooks', icon: FiServer },
-  { key: 'machines', label: 'Machines', icon: FiMonitor },
-  { key: 'history', label: 'History', icon: FiClock },
-  { key: 'update-reports', label: 'Update reports', icon: FiBarChart2 },
-];
-
-const NAV_SECTIONS: NavSection[] = [
-  { title: 'Manager', keys: ['overview', 'get-started', 'playbooks'] },
-  { title: 'Machines', keys: ['machines', 'history'] },
-  { title: 'Reports', keys: ['update-reports'] },
-];
-
 function pct(ok: number, total: number) {
   return total ? ((ok / total) * 100).toFixed(1) : '0.0';
 }
@@ -139,7 +114,7 @@ export default function HomePage({ searchParams }: { searchParams?: DashboardSea
     ? (searchParams?.env as (typeof ENV_OPTIONS)[number])
     : 'prod';
   const selectedBasePath = searchParams?.basePath || DEFAULT_BASE_PATH;
-  const activeView = NAV_ITEMS.some((item) => item.key === searchParams?.view) ? (searchParams?.view as NavKey) : 'overview';
+  const activeView = isValidManagerNavKey(searchParams?.view) ? searchParams.view : 'overview';
   const selectedResourceType = searchParams?.resourceType || 'all';
   const selectedDistribution = searchParams?.distribution || 'all';
   const selectedPlatform = searchParams?.platform || 'all';
@@ -245,7 +220,7 @@ export default function HomePage({ searchParams }: { searchParams?: DashboardSea
         <div className="header-user">
           <span>{session?.username || 'Okänd användare'}</span>
           <form action="/api/auth/logout" method="post" className="inline">
-            <button className="ghost-btn ml-3" type="submit">Logga ut</button>
+            <AppButton className="ml-3" type="submit">Logga ut</AppButton>
           </form>
         </div>
       </header>
@@ -261,44 +236,19 @@ export default function HomePage({ searchParams }: { searchParams?: DashboardSea
       </section>
 
       <div className="shell-layout">
-        <aside className="side-nav">
-          <input className="side-search" placeholder="Search" />
-          {NAV_SECTIONS.map((section) => (
-            <section className="side-section" key={section.title}>
-              <p className="side-title">{section.title}</p>
-              {section.keys.map((key) => {
-                const item = NAV_ITEMS.find((navItem) => navItem.key === key);
-                if (!item) return null;
-                const NavIcon = item.icon;
-                const itemHref = item.key === 'machines'
-                  ? `/machines?env=${selectedEnv}`
-                  : `/?env=${selectedEnv}&view=${item.key}&basePath=${selectedBasePath}`;
-                return (
-                  <a
-                    key={item.key}
-                    href={itemHref}
-                    className={`side-link ${activeView === item.key ? 'active' : ''}`}
-                  >
-                    <span className="side-icon"><NavIcon /></span>
-                    <span>{item.label}</span>
-                  </a>
-                );
-              })}
-            </section>
-          ))}
-        </aside>
+        <ManagerSidebarNav activeView={activeView} selectedEnv={selectedEnv} selectedBasePath={selectedBasePath} />
 
         <section className="main-pane">
           <p className="pane-context-text">Operations workflow · Följ fleet-hälsa, automation och plattformsstatus från en samlad översikt.</p>
           <section className="command-bar">
             <div className="command-left">
-              <button className="ghost-btn" type="button"><FiRefreshCw /> Refresh</button>
-              <button className="ghost-btn" type="button">Inventory sync</button>
-              <button className="ghost-btn" type="button">Run compliance scan</button>
+              <AppButton type="button"><FiRefreshCw /> Refresh</AppButton>
+              <AppButton type="button">Inventory sync</AppButton>
+              <AppButton type="button">Run compliance scan</AppButton>
             </div>
             <div className="command-right">
-              <a className="ghost-btn" href={csvHref} download="autopatch-runs.csv">Export to CSV</a>
-              {latestRun?.report_xlsx && <a className="ghost-btn" href={`/${latestRun.report_xlsx}`}>Export Excel</a>}
+              <AppButtonLink href={csvHref} download="autopatch-runs.csv">Export to CSV</AppButtonLink>
+              {latestRun?.report_xlsx && <AppButtonLink href={`/${latestRun.report_xlsx}`}>Export Excel</AppButtonLink>}
             </div>
           </section>
 
@@ -319,12 +269,15 @@ export default function HomePage({ searchParams }: { searchParams?: DashboardSea
 
             {activeView === 'overview' && (
               <>
-                <section className="tabs-row">
-                  <a href={`/?env=${selectedEnv}&view=overview&overviewTab=fleet&basePath=${selectedBasePath}`} className={`tab ${overviewTab === 'fleet' ? 'active' : ''}`}>Fleet status</a>
-                  <a href={`/?env=${selectedEnv}&view=overview&overviewTab=automation&basePath=${selectedBasePath}`} className={`tab ${overviewTab === 'automation' ? 'active' : ''}`}>Automation</a>
-                  <a href={`/?env=${selectedEnv}&view=overview&overviewTab=platforms&basePath=${selectedBasePath}`} className={`tab ${overviewTab === 'platforms' ? 'active' : ''}`}>Platform coverage</a>
-                  <a href={`/?env=${selectedEnv}&view=overview&overviewTab=operations&basePath=${selectedBasePath}`} className={`tab ${overviewTab === 'operations' ? 'active' : ''}`}>Operations backlog</a>
-                </section>
+                <LinkTabs
+                  activeKey={overviewTab}
+                  tabs={[
+                    { key: 'fleet', label: 'Fleet status', href: `/?env=${selectedEnv}&view=overview&overviewTab=fleet&basePath=${selectedBasePath}` },
+                    { key: 'automation', label: 'Automation', href: `/?env=${selectedEnv}&view=overview&overviewTab=automation&basePath=${selectedBasePath}` },
+                    { key: 'platforms', label: 'Platform coverage', href: `/?env=${selectedEnv}&view=overview&overviewTab=platforms&basePath=${selectedBasePath}` },
+                    { key: 'operations', label: 'Operations backlog', href: `/?env=${selectedEnv}&view=overview&overviewTab=operations&basePath=${selectedBasePath}` },
+                  ]}
+                />
 
                 <div className="kpi-grid">
                   <article className="kpi-card"><p className="kpi-title">Managed nodes</p><p className="kpi-value">{inventory.server_count}</p></article>
@@ -418,7 +371,7 @@ export default function HomePage({ searchParams }: { searchParams?: DashboardSea
                       </select>
                     </label>
                     <div className="md:col-span-3">
-                      <button className="primary-btn" type="submit">Spara FreeIPA inställningar</button>
+                      <AppButton variant="primary" type="submit">Spara FreeIPA inställningar</AppButton>
                     </div>
                   </form>
 
@@ -436,7 +389,7 @@ export default function HomePage({ searchParams }: { searchParams?: DashboardSea
                       <input className="mt-1 w-full rounded-md border border-slate-300 px-2 py-1 text-sm" type="password" name="secret" required />
                     </label>
                     <div className="md:col-span-4">
-                      <button className="primary-btn" type="submit">Lägg till service-konto</button>
+                      <AppButton variant="primary" type="submit">Lägg till service-konto</AppButton>
                     </div>
                   </form>
 
@@ -501,7 +454,7 @@ export default function HomePage({ searchParams }: { searchParams?: DashboardSea
                       <span>EL security-only</span>
                     </label>
                     <div className="md:col-span-2 lg:col-span-4 flex gap-2">
-                      <button className="primary-btn" type="submit">Generate playbook</button>
+                      <AppButton variant="primary" type="submit">Generate playbook</AppButton>
                     </div>
                   </form>
 
@@ -518,7 +471,7 @@ export default function HomePage({ searchParams }: { searchParams?: DashboardSea
                     <p className="font-semibold text-slate-800">Install updates now for {inventory.server_count} selected machine(s)</p>
                     <p className="text-xs text-slate-600">There may be newer updates available to choose from. We strongly recommend you assess now prior to installing updates.</p>
                   </div>
-                  <div className="flex gap-2"><button className="primary-btn" type="button">Install now</button><button className="ghost-btn" type="button">Cancel</button></div>
+                  <div className="flex gap-2"><AppButton variant="primary" type="button">Install now</AppButton><AppButton type="button">Cancel</AppButton></div>
                 </section>
 
                 <div className="kpi-grid kpi-grid-machines">
@@ -572,8 +525,8 @@ export default function HomePage({ searchParams }: { searchParams?: DashboardSea
                       </select>
                     </label>
                     <div className="md:col-span-2 xl:col-span-5 flex gap-2">
-                      <button className="primary-btn" type="submit">Apply filters</button>
-                      <a className="ghost-btn" href={`/?env=${selectedEnv}&view=${activeView}&basePath=${selectedBasePath}`}>Reset filters</a>
+                      <AppButton variant="primary" type="submit">Apply filters</AppButton>
+                      <AppButtonLink href={`/?env=${selectedEnv}&view=${activeView}&basePath=${selectedBasePath}`}>Reset filters</AppButtonLink>
                     </div>
                   </form>
                   <div className="overflow-x-auto">
