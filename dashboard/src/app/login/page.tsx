@@ -15,7 +15,7 @@ export default function LoginPage({ searchParams }: { searchParams?: LoginPagePa
       <section className="w-full max-w-md rounded-xl border border-rose-800 bg-rose-900/90 p-6 shadow-xl shadow-rose-950/50 space-y-4">
         <div>
           <h1 className="text-2xl font-semibold text-rose-50">Logga in via FreeIPA</h1>
-          <p className="text-sm text-rose-200">Säker inloggning till OpenPatch Console.</p>
+          <p className="text-sm text-rose-200">Säker inloggning till Overseer Console.</p>
         </div>
 
         <div className="rounded-md bg-rose-950/60 p-3 text-xs text-rose-100">

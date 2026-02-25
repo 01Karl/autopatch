@@ -1,21 +1,12 @@
-import db from '@/lib/db';
 import { loadInventorySummary } from '@/lib/inventory';
-import { FiActivity, FiArrowLeft, FiBox, FiCheckCircle, FiClock, FiCpu, FiDatabase, FiHardDrive, FiLock, FiRefreshCw, FiSettings, FiShield, FiSliders, FiTool, FiUser, FiXCircle } from 'react-icons/fi';
+import { FiActivity, FiArrowLeft, FiBox, FiCheckCircle, FiClock, FiCpu, FiDatabase, FiHardDrive, FiLock, FiRefreshCw, FiSettings, FiShield, FiSliders, FiTool, FiUser } from 'react-icons/fi';
 
 const ENV_OPTIONS = ['prod', 'qa', 'dev'] as const;
 const DEFAULT_BASE_PATH = 'environments';
 
-type MachineTab = 'recommended' | 'history' | 'scheduling';
+type MachineSection = 'overview' | 'security' | 'advisor-recommendations' | 'extensions' | 'continuous-delivery' | 'configuration' | 'identity' | 'properties' | 'locks';
+type MachineTab = 'properties' | 'capabilities' | 'recommendations' | 'tutorials';
 type ContentTab = 'packages' | 'errata' | 'module-streams' | 'repository-sets';
-
-type ScheduleRow = {
-  id: number;
-  name: string;
-  env: string;
-  day_of_week: string;
-  time_hhmm: string;
-  enabled: number;
-};
 
 function getPlatformAndDistribution(index: number) {
   const linuxDistributions = ['Ubuntu', 'Debian', 'RHEL', 'Rocky Linux', 'SUSE Linux Enterprise', 'AlmaLinux'] as const;
@@ -33,14 +24,9 @@ function getPlatformAndDistribution(index: number) {
   return { platform, distribution };
 }
 
-function weekdayLabel(day: string) {
-  const map: Record<string, string> = { mon: 'Måndag', tue: 'Tisdag', wed: 'Onsdag', thu: 'Torsdag', fri: 'Fredag', sat: 'Lördag', sun: 'Söndag' };
-  return map[day] ?? day;
-}
-
 type MachinePageProps = {
   params: { machineName: string };
-  searchParams?: { env?: string; basePath?: string; tab?: string; content?: string };
+  searchParams?: { env?: string; basePath?: string; section?: string; tab?: string; content?: string };
 };
 
 const updates = [
@@ -78,7 +64,19 @@ export default function MachinePage({ params, searchParams }: MachinePageProps) 
     ? (searchParams?.env as (typeof ENV_OPTIONS)[number])
     : 'prod';
   const selectedBasePath = searchParams?.basePath || DEFAULT_BASE_PATH;
-  const activeTab: MachineTab = searchParams?.tab === 'history' || searchParams?.tab === 'scheduling' ? searchParams.tab : 'recommended';
+  const activeSection: MachineSection =
+    searchParams?.section === 'security' ||
+    searchParams?.section === 'advisor-recommendations' ||
+    searchParams?.section === 'extensions' ||
+    searchParams?.section === 'continuous-delivery' ||
+    searchParams?.section === 'configuration' ||
+    searchParams?.section === 'identity' ||
+    searchParams?.section === 'properties' ||
+    searchParams?.section === 'locks'
+      ? searchParams.section
+      : 'overview';
+
+  const activeTab: MachineTab = searchParams?.tab === 'capabilities' || searchParams?.tab === 'recommendations' || searchParams?.tab === 'tutorials' ? searchParams.tab : 'properties';
   const contentTab: ContentTab =
     searchParams?.content === 'errata' ||
     searchParams?.content === 'module-streams' ||
@@ -92,7 +90,6 @@ export default function MachinePage({ params, searchParams }: MachinePageProps) 
   const server = serverIndex >= 0 ? inventory.servers[serverIndex] : undefined;
   const { platform, distribution } = getPlatformAndDistribution(Math.max(serverIndex, 0));
 
-  const schedules = db.prepare('SELECT id,name,env,day_of_week,time_hhmm,enabled FROM schedules WHERE env = ? ORDER BY id DESC').all(selectedEnv) as ScheduleRow[];
 
   const resourceType = server?.cluster === 'standalone' ? 'Bare metal server' : 'Virtual machine';
   const patchOrchestration = server?.cluster === 'standalone' ? 'Native package manager' : 'Agent managed rollout';
@@ -103,7 +100,11 @@ export default function MachinePage({ params, searchParams }: MachinePageProps) 
   const otherCount = updates.filter((u) => u.classification === 'Other').length;
 
   const machineBaseHref = `/machines/${encodeURIComponent(machineName)}?env=${selectedEnv}&basePath=${selectedBasePath}`;
-  const recommendedBaseHref = `${machineBaseHref}&tab=recommended`;
+  const overviewBaseHref = `${machineBaseHref}&section=overview`;
+  const propertiesBaseHref = `${overviewBaseHref}&tab=properties`;
+  const capabilitiesBaseHref = `${overviewBaseHref}&tab=capabilities`;
+  const recommendationsBaseHref = `${overviewBaseHref}&tab=recommendations`;
+  const tutorialsBaseHref = `${overviewBaseHref}&tab=tutorials`;
 
   const contentTabs: { id: ContentTab; label: string }[] = [
     { id: 'packages', label: 'Packages' },
@@ -112,16 +113,51 @@ export default function MachinePage({ params, searchParams }: MachinePageProps) 
     { id: 'repository-sets', label: 'Repository sets' }
   ];
 
-  const machineMenuItems = [
-    { label: 'Overview', icon: FiActivity },
-    { label: 'Security', icon: FiShield },
-    { label: 'Advisor recommendations', icon: FiCheckCircle },
-    { label: 'Extensions', icon: FiBox },
-    { label: 'Continuous delivery', icon: FiRefreshCw },
-    { label: 'Configuration', icon: FiSliders },
-    { label: 'Identity', icon: FiUser },
-    { label: 'Properties', icon: FiCpu },
-    { label: 'Locks', icon: FiLock }
+  const essentials = [
+    { label: 'Computer name', value: machineName },
+    { label: 'FQDN', value: server?.fqdn || `${machineName}.${selectedEnv}.local` },
+    { label: 'Operating system', value: distribution },
+    { label: 'Operating system version', value: platform === 'Linux' ? 'Kernel 5.15 LTS' : 'Kernel N/A' },
+    { label: 'Manufacturer', value: resourceType === 'Virtual machine' ? 'VMware, Inc.' : 'Dell Technologies' },
+    { label: 'Model', value: resourceType === 'Virtual machine' ? 'VMware Virtual Platform' : 'PowerEdge R760' }
+  ];
+
+  const capabilityCards = [
+    { title: 'Updates', description: 'Customize updates and periodic patching for this machine.', state: 'Periodic assessment enabled' },
+    { title: 'Logs', description: 'Collect and inspect machine logs for troubleshooting.', state: 'Configured' },
+    { title: 'Insights', description: 'Enable monitoring insights for health and performance.', state: 'Connected' },
+    { title: 'Security', description: 'Monitor vulnerabilities and hardening recommendations.', state: 'Monitored' },
+    { title: 'Policies', description: 'Apply policy controls and compliance baselines.', state: 'Assigned' }
+  ];
+
+  const securityFindings = [
+    { cve: 'CVE-2026-1123', package: 'openssl', severity: 'High', status: 'Open', action: 'Patch with LSA-2026-017' },
+    { cve: 'CVE-2026-1301', package: 'kernel', severity: 'Critical', status: 'Mitigated in staging', action: 'Promote tested kernel rollout' },
+    { cve: 'CVE-2026-1440', package: 'containerd', severity: 'Medium', status: 'Open', action: 'Schedule during maintenance window' }
+  ];
+
+  const policyChecks = [
+    { policy: 'Critical patches within 7 days', status: 'At risk', details: '1 patch is older than SLA' },
+    { policy: 'No unsupported repositories', status: 'Compliant', details: 'Only approved repositories active' },
+    { policy: 'Reboot after kernel update', status: 'Compliant', details: 'Last kernel reboot completed' }
+  ];
+
+  const advisorHighlights = [
+    'Enable automatic CVE triage for critical vulnerabilities.',
+    'Move one-time updates into controlled weekly maintenance.',
+    'Attach this machine to the hardened Linux baseline policy.'
+  ];
+
+  const machineMenuItems: { key: MachineSection; label: string; icon: typeof FiActivity }[] = [
+    { key: 'overview', label: 'Overview', icon: FiActivity },
+    { key: 'security', label: 'Security', icon: FiShield },
+    { key: 'advisor-recommendations', label: 'Advisor recommendations', icon: FiCheckCircle },
+    { key: 'extensions', label: 'Extensions', icon: FiBox },
+    { key: 'continuous-delivery', label: 'Continuous delivery', icon: FiRefreshCw },
+    { key: 'configuration', label: 'Configuration', icon: FiSliders },
+    { key: 'identity', label: 'Identity', icon: FiUser },
+    { key: 'properties', label: 'Properties', icon: FiCpu },
+    { key: 'locks', label: 'Locks', icon: FiLock }
   ];
 
   const operationItems = [
@@ -137,10 +173,22 @@ export default function MachinePage({ params, searchParams }: MachinePageProps) 
   return (
     <main className="azure-shell">
       <header className="top-header">
-        <div className="brand">OpenPatch Console</div>
+        <div className="brand">Overseer Console</div>
         <input className="header-search" placeholder="Search machines, updates and docs" />
         <div className="header-user">Connie Wilson · CONTOSO</div>
       </header>
+
+      <section className="shell-page-intro">
+        <div className="shell-page-breadcrumbs">
+          <a href="/">Home</a>
+          <span>›</span>
+          <a href={`/?env=${selectedEnv}&view=machines&basePath=${selectedBasePath}`}>Machines</a>
+          <span>›</span>
+          <span>{machineName}</span>
+        </div>
+        <h1 className="shell-page-title">Overseer Update Manager</h1>
+        <p className="shell-page-subtitle">Machine details and update operations for {machineName}.</p>
+      </section>
 
       <div className="shell-layout">
         <aside className="side-nav machine-side-nav">
@@ -154,7 +202,7 @@ export default function MachinePage({ params, searchParams }: MachinePageProps) 
             {machineMenuItems.map((item) => {
               const ItemIcon = item.icon;
               return (
-                <a className="side-link" key={item.label} href="#">
+                <a className={`side-link ${activeSection === item.key ? 'active' : ''}`} key={item.label} href={`${machineBaseHref}&section=${item.key}`}>
                   <span className="side-icon"><ItemIcon /></span>
                   <span>{item.label}</span>
                 </a>
@@ -178,14 +226,6 @@ export default function MachinePage({ params, searchParams }: MachinePageProps) 
 
         <section className="main-pane">
           <section className="machine-content-area">
-            <div className="machine-breadcrumbs">
-              <a href="/">Home</a>
-              <span>›</span>
-              <a href={`/?env=${selectedEnv}&view=machines&basePath=${selectedBasePath}`}>OpenPatch Update Manager</a>
-              <span>›</span>
-              <span>{machineName}</span>
-            </div>
-
             <section className="machine-title-row">
               <div>
                 <h1 className="machine-title">⚙ {machineName} | Updates</h1>
@@ -194,6 +234,8 @@ export default function MachinePage({ params, searchParams }: MachinePageProps) 
               <button className="machine-close-btn" type="button">×</button>
             </section>
 
+            <p className="pane-context-text">Machine workflow · Use refresh, update checks, one-time update and scheduling actions from the command row below.</p>
+
             <section className="machine-actions-row">
               <button className="machine-action">Leave new experience</button>
               <button className="machine-action">Refresh</button>
@@ -201,267 +243,366 @@ export default function MachinePage({ params, searchParams }: MachinePageProps) 
               <button className="machine-action">One-time update</button>
               <button className="machine-action">Scheduled updates</button>
               <button className="machine-action">Update settings</button>
-              <button className="machine-action">OpenPatch Update Manager</button>
+              <button className="machine-action">Overseer Update Manager</button>
             </section>
 
             <section className="machine-announcement">
-              <p>Manage VM updates at scale with the new OpenPatch update orchestration flow. <a className="link" href={`/?env=${selectedEnv}&view=machines&basePath=${selectedBasePath}`}>Learn more</a></p>
+              <p>Manage VM updates at scale with the new Overseer update orchestration flow. <a className="link" href={`/?env=${selectedEnv}&view=machines&basePath=${selectedBasePath}`}>Learn more</a></p>
             </section>
 
             {!server && <p className="text-sm text-rose-700">Machine not found in inventory for selected environment.</p>}
 
-            <section className="machine-tab-strip">
-              <a className={`machine-tab ${activeTab === 'recommended' ? 'active' : ''}`} href={recommendedBaseHref}>Recommended updates</a>
-              <a className={`machine-tab ${activeTab === 'history' ? 'active' : ''}`} href={`${machineBaseHref}&tab=history`}>Update history</a>
-              <a className={`machine-tab ${activeTab === 'scheduling' ? 'active' : ''}`} href={`${machineBaseHref}&tab=scheduling`}>Scheduling</a>
-            </section>
-
-            {activeTab === 'recommended' && (
-              <section className="machine-card">
-                <div className="machine-section">
-                  <h2>Infrastructure (host) updates</h2>
-                  <div className="machine-kv-inline">
-                    <span>Maintenance timeline ⓘ</span>
-                    <strong>No upcoming updates</strong>
+            {activeSection === 'overview' && (
+              <>
+                <section className="machine-card space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-lg font-semibold">Essentials</h2>
+                    <a className="link text-sm" href="#">JSON View</a>
                   </div>
-                </div>
-
-                <div className="machine-section">
-                  <h2>Operating system (guest) updates</h2>
-                  <div className="machine-pill-row">
-                    <span>Periodic assessment ⓘ</span>
-                    <span className="machine-state-ok">● {periodicAssessment}</span>
-                    <span className="machine-divider">|</span>
-                    <span>Patch orchestration ⓘ</span>
-                    <strong>{patchOrchestration}</strong>
-                    <span className="machine-divider">|</span>
-                    <span>Distribution ⓘ</span>
-                    <strong>{distribution}</strong>
-                    <span className="machine-divider">|</span>
-                    <span>Platform</span>
-                    <strong>{platform}</strong>
+                  <div className="grid gap-x-16 gap-y-3 md:grid-cols-2">
+                    {essentials.map((item) => (
+                      <div key={item.label} className="flex items-start gap-3 text-sm">
+                        <span className="min-w-[190px] text-slate-600">{item.label}</span>
+                        <span className="text-slate-400">:</span>
+                        <strong className="font-medium text-slate-900">{item.value}</strong>
+                      </div>
+                    ))}
                   </div>
-                  <div className="machine-pill-row mt-2">
-                    <span>Hotpatch ⓘ</span>
-                    <span className="machine-state-off">● Disabled</span>
-                  </div>
-                </div>
-
-                <div className="machine-summary-grid">
-                  <article className="machine-summary-card">
-                    <p>Total updates ⓘ</p>
-                    <strong>{updates.length}</strong>
-                  </article>
-                  <article className="machine-summary-card">
-                    <p>Critical updates ⓘ</p>
-                    <strong className="text-amber-700">⚠ {criticalCount}</strong>
-                  </article>
-                  <article className="machine-summary-card">
-                    <p>Security updates ⓘ</p>
-                    <strong className="text-amber-700">⚠ {securityCount}</strong>
-                  </article>
-                  <article className="machine-summary-card">
-                    <p>Other updates ⓘ</p>
-                    <strong>● {otherCount}</strong>
-                  </article>
-                </div>
-
-                <p className="text-xs text-slate-500">Last assessed: 2026-02-22 15:12:24</p>
-
-                <section className="machine-content-tabs">
-                  {contentTabs.map((tabItem) => (
-                    <a
-                      key={tabItem.id}
-                      className={`machine-content-tab ${contentTab === tabItem.id ? 'active' : ''}`}
-                      href={`${recommendedBaseHref}&content=${tabItem.id}`}
-                    >
-                      {tabItem.label}
-                    </a>
-                  ))}
                 </section>
 
-                {contentTab === 'packages' && (
-                  <>
-                    <div className="machine-filter-row">
-                      <span className="machine-filter-chip">Search by update name, KB ID...</span>
-                      <span className="machine-filter-chip">Classification : All</span>
-                      <span className="machine-filter-chip">Severity (MSRC) : All</span>
-                      <span className="machine-filter-chip">Reboot required : All</span>
-                      <a className="ml-auto link" href="#">Open query</a>
+                <section className="machine-tab-strip">
+                  <a className={`machine-tab ${activeTab === 'properties' ? 'active' : ''}`} href={propertiesBaseHref}>Properties</a>
+                  <a className={`machine-tab ${activeTab === 'capabilities' ? 'active' : ''}`} href={capabilitiesBaseHref}>Capabilities</a>
+                  <a className={`machine-tab ${activeTab === 'recommendations' ? 'active' : ''}`} href={recommendationsBaseHref}>Recommendations</a>
+                  <a className={`machine-tab ${activeTab === 'tutorials' ? 'active' : ''}`} href={tutorialsBaseHref}>Tutorials</a>
+                </section>
+
+                {activeTab === 'properties' && (
+                  <section className="machine-card">
+                    <div className="machine-section">
+                      <h2>Infrastructure (host) updates</h2>
+                      <div className="machine-kv-inline">
+                        <span>Maintenance timeline ⓘ</span>
+                        <strong>No upcoming updates</strong>
+                      </div>
                     </div>
 
-                    <p className="text-sm text-slate-600">Showing {updates.length} of {updates.length} packages</p>
-
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-sm">
-                        <thead>
-                          <tr>
-                            <th>Package ↕</th>
-                            <th>Classification ↕</th>
-                            <th>Severity (MSRC) ↕</th>
-                            <th>KB IDs ↕</th>
-                            <th>Reboot required ↕</th>
-                            <th>Published date ↕</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {updates.map((update) => (
-                            <tr key={update.kb}>
-                              <td>{update.name}</td>
-                              <td>{update.classification}</td>
-                              <td>{update.severity}</td>
-                              <td>{update.kb}</td>
-                              <td>{update.reboot}</td>
-                              <td>{update.published}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
+                    <div className="machine-section">
+                      <h2>Operating system (guest) updates</h2>
+                      <div className="machine-pill-row">
+                        <span>Periodic assessment ⓘ</span>
+                        <span className="machine-state-ok">● {periodicAssessment}</span>
+                        <span className="machine-divider">|</span>
+                        <span>Patch orchestration ⓘ</span>
+                        <strong>{patchOrchestration}</strong>
+                        <span className="machine-divider">|</span>
+                        <span>Distribution ⓘ</span>
+                        <strong>{distribution}</strong>
+                        <span className="machine-divider">|</span>
+                        <span>Platform</span>
+                        <strong>{platform}</strong>
+                      </div>
+                      <div className="machine-pill-row mt-2">
+                        <span>Hotpatch ⓘ</span>
+                        <span className="machine-state-off">● Disabled</span>
+                      </div>
                     </div>
-                  </>
+
+                    <div className="machine-summary-grid">
+                      <article className="machine-summary-card">
+                        <p>Total updates ⓘ</p>
+                        <strong>{updates.length}</strong>
+                      </article>
+                      <article className="machine-summary-card">
+                        <p>Critical updates ⓘ</p>
+                        <strong className="text-amber-700">⚠ {criticalCount}</strong>
+                      </article>
+                      <article className="machine-summary-card">
+                        <p>Security updates ⓘ</p>
+                        <strong className="text-amber-700">⚠ {securityCount}</strong>
+                      </article>
+                      <article className="machine-summary-card">
+                        <p>Other updates ⓘ</p>
+                        <strong>● {otherCount}</strong>
+                      </article>
+                    </div>
+
+                    <p className="text-xs text-slate-500">Last assessed: 2026-02-22 15:12:24</p>
+
+                    <section className="machine-content-tabs">
+                      {contentTabs.map((tabItem) => (
+                        <a
+                          key={tabItem.id}
+                          className={`machine-content-tab ${contentTab === tabItem.id ? 'active' : ''}`}
+                          href={`${propertiesBaseHref}&content=${tabItem.id}`}
+                        >
+                          {tabItem.label}
+                        </a>
+                      ))}
+                    </section>
+
+                    {contentTab === 'packages' && (
+                      <>
+                        <div className="machine-filter-row">
+                          <span className="machine-filter-chip">Search by update name, KB ID...</span>
+                          <span className="machine-filter-chip">Classification : All</span>
+                          <span className="machine-filter-chip">Severity (MSRC) : All</span>
+                          <span className="machine-filter-chip">Reboot required : All</span>
+                          <a className="ml-auto link" href="#">Open query</a>
+                        </div>
+
+                        <p className="text-sm text-slate-600">Showing {updates.length} of {updates.length} packages</p>
+
+                        <div className="overflow-x-auto">
+                          <table className="w-full text-sm">
+                            <thead>
+                              <tr>
+                                <th>Package ↕</th>
+                                <th>Classification ↕</th>
+                                <th>Severity (MSRC) ↕</th>
+                                <th>KB IDs ↕</th>
+                                <th>Reboot required ↕</th>
+                                <th>Published date ↕</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {updates.map((update) => (
+                                <tr key={update.kb}>
+                                  <td>{update.name}</td>
+                                  <td>{update.classification}</td>
+                                  <td>{update.severity}</td>
+                                  <td>{update.kb}</td>
+                                  <td>{update.reboot}</td>
+                                  <td>{update.published}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </>
+                    )}
+
+                    {contentTab === 'errata' && (
+                      <>
+                        <div className="machine-filter-row">
+                          <span className="machine-filter-chip">Search errata ID...</span>
+                          <span className="machine-filter-chip">Type : All</span>
+                          <span className="machine-filter-chip">Severity : All</span>
+                          <span className="machine-filter-chip">Installable : Yes</span>
+                        </div>
+                        <p className="text-sm text-slate-600">Showing {errata.length} of {errata.length} errata</p>
+                        <div className="overflow-x-auto">
+                          <table className="w-full text-sm">
+                            <thead>
+                              <tr>
+                                <th>Errata ↕</th>
+                                <th>Type ↕</th>
+                                <th>Severity ↕</th>
+                                <th>Installable ↕</th>
+                                <th>Synopsis ↕</th>
+                                <th>Published date ↕</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {errata.map((entry) => (
+                                <tr key={entry.id}>
+                                  <td>{entry.id}</td>
+                                  <td>{entry.type}</td>
+                                  <td>{entry.severity}</td>
+                                  <td>{entry.installable}</td>
+                                  <td>{entry.synopsis}</td>
+                                  <td>{entry.published}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </>
+                    )}
+
+                    {contentTab === 'module-streams' && (
+                      <>
+                        <div className="machine-filter-row">
+                          <span className="machine-filter-chip">Search module stream...</span>
+                          <span className="machine-filter-chip">Status : All</span>
+                          <span className="machine-filter-chip">Repository set : All</span>
+                        </div>
+                        <p className="text-sm text-slate-600">Showing {moduleStreams.length} of {moduleStreams.length} module streams</p>
+                        <div className="overflow-x-auto">
+                          <table className="w-full text-sm">
+                            <thead>
+                              <tr>
+                                <th>Module stream ↕</th>
+                                <th>Status ↕</th>
+                                <th>Repository set ↕</th>
+                                <th>Profile ↕</th>
+                                <th>Packages ↕</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {moduleStreams.map((stream) => (
+                                <tr key={stream.name}>
+                                  <td>{stream.name}</td>
+                                  <td>{stream.status}</td>
+                                  <td>{stream.repoSet}</td>
+                                  <td>{stream.profile}</td>
+                                  <td>{stream.packages}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </>
+                    )}
+
+                    {contentTab === 'repository-sets' && (
+                      <>
+                        <div className="machine-filter-row">
+                          <span className="machine-filter-chip">Search repository set...</span>
+                          <span className="machine-filter-chip">State : All</span>
+                          <span className="machine-filter-chip">Source : All</span>
+                        </div>
+                        <p className="text-sm text-slate-600">Showing {repositorySets.length} of {repositorySets.length} repository sets</p>
+                        <div className="overflow-x-auto">
+                          <table className="w-full text-sm">
+                            <thead>
+                              <tr>
+                                <th>Repository set ↕</th>
+                                <th>State ↕</th>
+                                <th>Source ↕</th>
+                                <th>Content type ↕</th>
+                                <th>Last sync ↕</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {repositorySets.map((repo) => (
+                                <tr key={repo.name}>
+                                  <td>{repo.name}</td>
+                                  <td>{repo.state}</td>
+                                  <td>{repo.source}</td>
+                                  <td>{repo.contentType}</td>
+                                  <td>{repo.lastSync}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </>
+                    )}
+                  </section>
+                )}
+                {activeTab === 'capabilities' && (
+                  <section className="space-y-4">
+                    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                      {capabilityCards.map((card) => (
+                        <article key={card.title} className="rounded-md border border-slate-200 bg-white p-5 shadow-sm">
+                          <h3 className="text-2xl font-semibold text-slate-800">{card.title}</h3>
+                          <p className="mt-3 text-base text-slate-600">{card.description}</p>
+                          <p className="mt-6 text-sm text-slate-700">● {card.state}</p>
+                        </article>
+                      ))}
+                    </div>
+                  </section>
                 )}
 
-                {contentTab === 'errata' && (
-                  <>
-                    <div className="machine-filter-row">
-                      <span className="machine-filter-chip">Search errata ID...</span>
-                      <span className="machine-filter-chip">Type : All</span>
-                      <span className="machine-filter-chip">Severity : All</span>
-                      <span className="machine-filter-chip">Installable : Yes</span>
+                {activeTab === 'recommendations' && (
+                  <section className="machine-card">
+                    <div className="machine-section">
+                      <h2>Recommendations</h2>
+                      <p className="text-sm text-slate-500">Rekommenderade uppdateringar och historik för {machineName}.</p>
                     </div>
-                    <p className="text-sm text-slate-600">Showing {errata.length} of {errata.length} errata</p>
+
                     <div className="overflow-x-auto">
                       <table className="w-full text-sm">
                         <thead>
                           <tr>
-                            <th>Errata ↕</th>
-                            <th>Type ↕</th>
-                            <th>Severity ↕</th>
-                            <th>Installable ↕</th>
-                            <th>Synopsis ↕</th>
-                            <th>Published date ↕</th>
+                            <th>Run ID</th>
+                            <th>Started</th>
+                            <th>Result</th>
+                            <th>Installed</th>
+                            <th>Failed</th>
+                            <th>Reboot required</th>
+                            <th>Initiated by</th>
                           </tr>
                         </thead>
                         <tbody>
-                          {errata.map((entry) => (
+                          {updateHistory.map((entry) => (
                             <tr key={entry.id}>
                               <td>{entry.id}</td>
-                              <td>{entry.type}</td>
-                              <td>{entry.severity}</td>
-                              <td>{entry.installable}</td>
-                              <td>{entry.synopsis}</td>
-                              <td>{entry.published}</td>
+                              <td>{entry.started}</td>
+                              <td>{entry.result}</td>
+                              <td>{entry.installed}</td>
+                              <td>{entry.failed}</td>
+                              <td>{entry.reboot}</td>
+                              <td>{entry.initiatedBy}</td>
                             </tr>
                           ))}
                         </tbody>
                       </table>
                     </div>
-                  </>
+                  </section>
                 )}
+            {activeTab === 'tutorials' && (
+              <section className="machine-card space-y-4">
+                <div className="machine-section">
+                  <h2>Tutorials</h2>
+                  <p className="text-sm text-slate-500">Guider för patchning, schemaläggning och felsökning på individuell maskin.</p>
+                </div>
 
-                {contentTab === 'module-streams' && (
-                  <>
-                    <div className="machine-filter-row">
-                      <span className="machine-filter-chip">Search module stream...</span>
-                      <span className="machine-filter-chip">Status : All</span>
-                      <span className="machine-filter-chip">Repository set : All</span>
-                    </div>
-                    <p className="text-sm text-slate-600">Showing {moduleStreams.length} of {moduleStreams.length} module streams</p>
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-sm">
-                        <thead>
-                          <tr>
-                            <th>Module stream ↕</th>
-                            <th>Status ↕</th>
-                            <th>Repository set ↕</th>
-                            <th>Profile ↕</th>
-                            <th>Packages ↕</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {moduleStreams.map((stream) => (
-                            <tr key={stream.name}>
-                              <td>{stream.name}</td>
-                              <td>{stream.status}</td>
-                              <td>{stream.repoSet}</td>
-                              <td>{stream.profile}</td>
-                              <td>{stream.packages}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </>
-                )}
+                <ul className="text-sm text-slate-700 list-disc pl-5 space-y-2">
+                  <li>Planera och köra en patchrunda för en singelserver.</li>
+                  <li>Bygg en playbook för ett kluster med rolling updates.</li>
+                  <li>Verifiera resultat via logs, insights och policy-status.</li>
+                </ul>
 
-                {contentTab === 'repository-sets' && (
-                  <>
-                    <div className="machine-filter-row">
-                      <span className="machine-filter-chip">Search repository set...</span>
-                      <span className="machine-filter-chip">State : All</span>
-                      <span className="machine-filter-chip">Source : All</span>
-                    </div>
-                    <p className="text-sm text-slate-600">Showing {repositorySets.length} of {repositorySets.length} repository sets</p>
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-sm">
-                        <thead>
-                          <tr>
-                            <th>Repository set ↕</th>
-                            <th>State ↕</th>
-                            <th>Source ↕</th>
-                            <th>Content type ↕</th>
-                            <th>Last sync ↕</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {repositorySets.map((repo) => (
-                            <tr key={repo.name}>
-                              <td>{repo.name}</td>
-                              <td>{repo.state}</td>
-                              <td>{repo.source}</td>
-                              <td>{repo.contentType}</td>
-                              <td>{repo.lastSync}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </>
-                )}
+                <section className="machine-announcement">
+                  <p>You can manage schedules from the main dashboard. <a className="link" href={`/?env=${selectedEnv}&view=update-reports&basePath=${selectedBasePath}`}>Go to Update reports</a></p>
+                </section>
               </section>
             )}
 
-            {activeTab === 'history' && (
-              <section className="machine-card">
+              </>
+            )}
+
+            {activeSection === 'security' && (
+              <section className="machine-card space-y-4">
                 <div className="machine-section">
-                  <h2>Update history</h2>
-                  <p className="text-sm text-slate-500">Historik för senaste körningar på {machineName}.</p>
+                  <h2>Security overview</h2>
+                  <p className="text-sm text-slate-500">Errata, CVE findings and policy compliance for {machineName}.</p>
+                </div>
+
+                <div className="machine-summary-grid">
+                  <article className="machine-summary-card"><p>Open CVEs</p><strong className="text-rose-700">{securityFindings.filter((item) => item.status === 'Open').length}</strong></article>
+                  <article className="machine-summary-card"><p>Critical CVEs</p><strong className="text-amber-700">{securityFindings.filter((item) => item.severity === 'Critical').length}</strong></article>
+                  <article className="machine-summary-card"><p>Errata available</p><strong>{errata.length}</strong></article>
+                  <article className="machine-summary-card"><p>Policy drift</p><strong>{policyChecks.filter((item) => item.status !== 'Compliant').length}</strong></article>
                 </div>
 
                 <div className="overflow-x-auto">
+                  <h3 className="mb-2 text-sm font-semibold text-slate-700">CVE findings</h3>
                   <table className="w-full text-sm">
                     <thead>
-                      <tr>
-                        <th>Run ID</th>
-                        <th>Started</th>
-                        <th>Result</th>
-                        <th>Installed</th>
-                        <th>Failed</th>
-                        <th>Reboot required</th>
-                        <th>Initiated by</th>
-                      </tr>
+                      <tr><th>CVE</th><th>Package</th><th>Severity</th><th>Status</th><th>Recommended action</th></tr>
                     </thead>
                     <tbody>
-                      {updateHistory.map((entry) => (
-                        <tr key={entry.id}>
-                          <td>{entry.id}</td>
-                          <td>{entry.started}</td>
-                          <td>{entry.result}</td>
-                          <td>{entry.installed}</td>
-                          <td>{entry.failed}</td>
-                          <td>{entry.reboot}</td>
-                          <td>{entry.initiatedBy}</td>
+                      {securityFindings.map((finding) => (
+                        <tr key={finding.cve}>
+                          <td>{finding.cve}</td><td>{finding.package}</td><td>{finding.severity}</td><td>{finding.status}</td><td>{finding.action}</td>
                         </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                <div className="overflow-x-auto">
+                  <h3 className="mb-2 text-sm font-semibold text-slate-700">Policy compliance</h3>
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr><th>Policy</th><th>Status</th><th>Details</th></tr>
+                    </thead>
+                    <tbody>
+                      {policyChecks.map((policy) => (
+                        <tr key={policy.policy}><td>{policy.policy}</td><td>{policy.status}</td><td>{policy.details}</td></tr>
                       ))}
                     </tbody>
                   </table>
@@ -469,35 +610,24 @@ export default function MachinePage({ params, searchParams }: MachinePageProps) 
               </section>
             )}
 
-            {activeTab === 'scheduling' && (
+            {activeSection === 'advisor-recommendations' && (
               <section className="machine-card space-y-4">
                 <div className="machine-section">
-                  <h2>Scheduling</h2>
-                  <p className="text-sm text-slate-500">Aktiva scheman för miljö {selectedEnv.toUpperCase()} som kan tillämpas på {machineName}.</p>
+                  <h2>Advisor recommendations</h2>
+                  <p className="text-sm text-slate-500">Actionable guidance tailored to this machine.</p>
                 </div>
+                <ul className="text-sm text-slate-700 list-disc pl-5 space-y-2">
+                  {advisorHighlights.map((item) => (<li key={item}>{item}</li>))}
+                </ul>
+              </section>
+            )}
 
-                <div className="machine-schedule-list">
-                  {schedules.length > 0 ? (
-                    schedules.map((schedule) => (
-                      <article className="machine-schedule-item" key={schedule.id}>
-                        <div>
-                          <p className="font-semibold text-slate-800">{schedule.name}</p>
-                          <p className="text-xs text-slate-500">{weekdayLabel(schedule.day_of_week)} · {schedule.time_hhmm}</p>
-                        </div>
-                        <span className={schedule.enabled ? 'machine-state-ok' : 'machine-state-off'}>
-                          {schedule.enabled ? <FiCheckCircle className="inline mr-1" /> : <FiXCircle className="inline mr-1" />}
-                          {schedule.enabled ? 'Enabled' : 'Disabled'}
-                        </span>
-                      </article>
-                    ))
-                  ) : (
-                    <p className="text-sm text-slate-500">No schedules configured for this environment.</p>
-                  )}
+            {activeSection !== 'overview' && activeSection !== 'security' && activeSection !== 'advisor-recommendations' && (
+              <section className="machine-card">
+                <div className="machine-section">
+                  <h2>{machineMenuItems.find((item) => item.key === activeSection)?.label}</h2>
+                  <p className="text-sm text-slate-500">This section is prepared for future operational data integration.</p>
                 </div>
-
-                <section className="machine-announcement">
-                  <p>You can manage schedules from the main dashboard. <a className="link" href={`/?env=${selectedEnv}&view=update-reports&basePath=${selectedBasePath}`}>Go to Update reports</a></p>
-                </section>
               </section>
             )}
           </section>
