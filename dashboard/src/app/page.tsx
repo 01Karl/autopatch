@@ -351,7 +351,7 @@ export default function HomePage({ searchParams }: { searchParams?: DashboardSea
   return (
     <main className="azure-shell">
       <header className="top-header">
-        <div className="brand">OpenPatch Console</div>
+        <div className="brand">Overseer Console</div>
         <input className="header-search" placeholder="Search resources, services and docs" />
         <div className="header-user">
           <span>{session?.username || 'Okänd användare'}</span>
@@ -394,7 +394,7 @@ export default function HomePage({ searchParams }: { searchParams?: DashboardSea
           </section>
 
           <section className="tabs-row">
-            <span className="tab active">OpenPatch Update Manager</span>
+            <span className="tab active">Overseer Update Manager</span>
             <span className="tab">Environment: {selectedEnv.toUpperCase()}</span>
             <span className="tab">Inventory: {inventory.inventory_path}</span>
             <span className="tab">Source: {inventory.source ?? 'ansible'}</span>
@@ -402,7 +402,7 @@ export default function HomePage({ searchParams }: { searchParams?: DashboardSea
 
           <section className="content-area space-y-5">
             <div>
-              <h1 className="text-3xl font-semibold">OpenPatch Update Manager</h1>
+              <h1 className="text-3xl font-semibold">Overseer Update Manager</h1>
               <p className="mt-1 text-sm text-slate-500">Läser från {selectedBasePath}/{selectedEnv}/inventory via Python-integration.</p>
               {inventory.error && <p className="mt-2 text-sm text-rose-700">Inventory-fel: {inventory.error}</p>}
               {inventoryByEnv.some((item) => item.source === 'fixture') && <p className="mt-2 text-sm text-amber-700">Visar fejkdata från JSON-fixtures för snabb UI-test.</p>}

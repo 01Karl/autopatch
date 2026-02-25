@@ -141,7 +141,7 @@ export default function MachinePage({ params, searchParams }: MachinePageProps) 
   return (
     <main className="azure-shell">
       <header className="top-header">
-        <div className="brand">OpenPatch Console</div>
+        <div className="brand">Overseer Console</div>
         <input className="header-search" placeholder="Search machines, updates and docs" />
         <div className="header-user">Connie Wilson · CONTOSO</div>
       </header>
@@ -185,7 +185,7 @@ export default function MachinePage({ params, searchParams }: MachinePageProps) 
             <div className="machine-breadcrumbs">
               <a href="/">Home</a>
               <span>›</span>
-              <a href={`/?env=${selectedEnv}&view=machines&basePath=${selectedBasePath}`}>OpenPatch Update Manager</a>
+              <a href={`/?env=${selectedEnv}&view=machines&basePath=${selectedBasePath}`}>Overseer Update Manager</a>
               <span>›</span>
               <span>{machineName}</span>
             </div>
@@ -205,11 +205,11 @@ export default function MachinePage({ params, searchParams }: MachinePageProps) 
               <button className="machine-action">One-time update</button>
               <button className="machine-action">Scheduled updates</button>
               <button className="machine-action">Update settings</button>
-              <button className="machine-action">OpenPatch Update Manager</button>
+              <button className="machine-action">Overseer Update Manager</button>
             </section>
 
             <section className="machine-announcement">
-              <p>Manage VM updates at scale with the new OpenPatch update orchestration flow. <a className="link" href={`/?env=${selectedEnv}&view=machines&basePath=${selectedBasePath}`}>Learn more</a></p>
+              <p>Manage VM updates at scale with the new Overseer update orchestration flow. <a className="link" href={`/?env=${selectedEnv}&view=machines&basePath=${selectedBasePath}`}>Learn more</a></p>
             </section>
 
             {!server && <p className="text-sm text-rose-700">Machine not found in inventory for selected environment.</p>}
