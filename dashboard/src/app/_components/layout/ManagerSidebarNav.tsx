@@ -1,6 +1,9 @@
+'use client';
+
 import Link from 'next/link';
+import { useState } from 'react';
 import type { IconType } from 'react-icons';
-import { FiChevronDown, FiFileText, FiHome, FiLayers, FiMonitor, FiPackage, FiPlayCircle, FiShield, FiSliders, FiTool } from 'react-icons/fi';
+import { FiChevronDown, FiCpu, FiFileText, FiHardDrive, FiHome, FiLayers, FiMonitor, FiPackage, FiPlayCircle, FiShield, FiSliders, FiTool } from 'react-icons/fi';
 
 export type ManagerNavKey =
   | 'overview'
@@ -10,10 +13,16 @@ export type ManagerNavKey =
   | 'machines-all'
   | 'machines-register'
   | 'machines-host-collections'
+  | 'compliance'
   | 'compliance-policies'
   | 'compliance-scap-contents'
   | 'compliance-reports'
   | 'compliance-tailoring-files'
+  | 'provisioning'
+  | 'provisioning-architectures'
+  | 'provisioning-hardware-models'
+  | 'provisioning-installation-media'
+  | 'provisioning-operating-systems'
   | 'configure-playbooks'
   | 'configure-ansible'
   | 'configure-roles-variables'
@@ -63,7 +72,6 @@ const NAV_SECTIONS: NavSection[] = [
         key: 'configure-ansible',
         label: 'Ansible',
         icon: FiLayers,
-        href: (env) => `/configure/ansible?env=${env}`,
         children: [
           { key: 'configure-roles-variables', label: 'Roles & Variables', href: (env) => `/configure/ansible/roles-variables?env=${env}` },
         ],
@@ -84,7 +92,7 @@ const NAV_SECTIONS: NavSection[] = [
         ],
       },
       {
-        key: 'compliance-policies',
+        key: 'compliance',
         label: 'Compliance',
         icon: FiShield,
         children: [
@@ -92,6 +100,17 @@ const NAV_SECTIONS: NavSection[] = [
           { key: 'compliance-scap-contents', label: 'SCAP Contents', href: (env) => `/compliance/scap-contents?env=${env}` },
           { key: 'compliance-reports', label: 'Reports', href: (env) => `/compliance/reports?env=${env}` },
           { key: 'compliance-tailoring-files', label: 'Tailoring Files', href: (env) => `/compliance/tailoring-files?env=${env}` },
+        ],
+      },
+      {
+        key: 'provisioning',
+        label: 'Provisioning',
+        icon: FiHardDrive,
+        children: [
+          { key: 'provisioning-architectures', label: 'Architectures', href: (env) => `/provisioning/architectures?env=${env}` },
+          { key: 'provisioning-hardware-models', label: 'Hardware Models', href: (env) => `/provisioning/hardware-models?env=${env}` },
+          { key: 'provisioning-installation-media', label: 'Installation Media', href: (env) => `/provisioning/installation-media?env=${env}` },
+          { key: 'provisioning-operating-systems', label: 'Operating Systems', href: (env) => `/provisioning/operating-systems?env=${env}` },
         ],
       },
     ],
@@ -103,6 +122,12 @@ export function isValidManagerNavKey(view?: string): view is ManagerNavKey {
 }
 
 export default function ManagerSidebarNav({ activeView, selectedEnv, selectedBasePath }: ManagerSidebarNavProps) {
+  const [openGroups, setOpenGroups] = useState<Partial<Record<ManagerNavKey, boolean>>>({});
+
+  const toggleGroup = (key: ManagerNavKey) => {
+    setOpenGroups((prev) => ({ ...prev, [key]: !prev[key] }));
+  };
+
   return (
     <aside className="side-nav">
       <input className="side-search" placeholder="Search" />
@@ -112,36 +137,33 @@ export default function ManagerSidebarNav({ activeView, selectedEnv, selectedBas
           {section.items.map((item) => {
             const NavIcon = item.icon;
             const isParentActive = item.children?.some((child) => child.key === activeView);
+            const isOpen = Boolean(openGroups[item.key]);
 
             return (
               <div className="side-group" key={item.key}>
-                {item.href ? (
-                  <Link href={item.href(selectedEnv, selectedBasePath)} className={`side-link ${activeView === item.key ? 'active' : ''}`}>
+                {item.children ? (
+                  <button type="button" className={`side-link w-full text-left ${isParentActive ? 'active' : ''}`} onClick={() => toggleGroup(item.key)}>
                     <span className="side-icon"><NavIcon /></span>
                     <span>{item.label}</span>
-                    {item.children && <FiChevronDown className="ml-auto h-4 w-4 text-slate-400" />}
-                  </Link>
+                    <FiChevronDown className={`ml-auto h-4 w-4 text-slate-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+                  </button>
                 ) : (
-                  <div className={`side-link ${isParentActive ? 'active' : ''}`}>
+                  <Link href={item.href ? item.href(selectedEnv, selectedBasePath) : '#'} className={`side-link ${activeView === item.key ? 'active' : ''}`}>
                     <span className="side-icon"><NavIcon /></span>
                     <span>{item.label}</span>
-                    {item.children && <FiChevronDown className="ml-auto h-4 w-4 text-slate-400" />}
-                  </div>
+                  </Link>
                 )}
 
-                {item.children && (
+                {item.children && isOpen && (
                   <div className="side-submenu">
                     {item.children.map((child) => (
-                      <Link
-                        key={child.key}
-                        href={child.href(selectedEnv, selectedBasePath)}
-                        className={`side-sublink ${activeView === child.key ? 'active' : ''}`}
-                      >
+                      <Link key={child.key} href={child.href(selectedEnv, selectedBasePath)} className={`side-sublink ${activeView === child.key ? 'active' : ''}`}>
                         {child.key === 'machines-host-collections' && <FiPackage className="h-3.5 w-3.5" />}
                         {child.key === 'machines-register' && <FiFileText className="h-3.5 w-3.5" />}
                         {child.key === 'machines-all' && <FiMonitor className="h-3.5 w-3.5" />}
                         {child.key.startsWith('compliance-') && <FiSliders className="h-3.5 w-3.5" />}
                         {child.key === 'configure-roles-variables' && <FiLayers className="h-3.5 w-3.5" />}
+                        {child.key.startsWith('provisioning-') && <FiCpu className="h-3.5 w-3.5" />}
                         <span>{child.label}</span>
                       </Link>
                     ))}

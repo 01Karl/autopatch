@@ -5,7 +5,7 @@ import { getFreeIPAConfig } from '@/lib/freeipa';
 import { cookies } from 'next/headers';
 import { mergeInventories } from '@/lib/inventory';
 import { FiMonitor, FiRefreshCw, FiServer } from 'react-icons/fi';
-import ManagerSidebarNav, { isValidManagerNavKey } from '@/app/_components/layout/ManagerSidebarNav';
+import ManagerSidebarNav from '@/app/_components/layout/ManagerSidebarNav';
 import { AppButton, AppButtonLink } from '@/app/_components/ui/AppButton';
 import { buildPatchRoutineYaml } from '@/app/_lib/playbook-routine';
 
@@ -57,6 +57,8 @@ type MachineRow = {
 const INVENTORY_ENVS = ['prod', 'qa', 'dev'] as const;
 const ENV_OPTIONS = ['all', ...INVENTORY_ENVS] as const;
 const DEFAULT_BASE_PATH = 'environments';
+const OVERVIEW_VIEW_KEYS = ['overview', 'get-started', 'playbooks', 'machines', 'history', 'update-reports'] as const;
+
 function pct(ok: number, total: number) {
   return total ? ((ok / total) * 100).toFixed(1) : '0.0';
 }
@@ -110,7 +112,9 @@ export default function HomePage({ searchParams }: { searchParams?: DashboardSea
     ? (searchParams?.env as (typeof ENV_OPTIONS)[number])
     : 'prod';
   const selectedBasePath = searchParams?.basePath || DEFAULT_BASE_PATH;
-  const activeView = isValidManagerNavKey(searchParams?.view) ? searchParams.view : 'overview';
+  const activeView = OVERVIEW_VIEW_KEYS.includes((searchParams?.view || '') as (typeof OVERVIEW_VIEW_KEYS)[number])
+    ? (searchParams?.view as (typeof OVERVIEW_VIEW_KEYS)[number])
+    : 'overview';
   const selectedResourceType = searchParams?.resourceType || 'all';
   const selectedDistribution = searchParams?.distribution || 'all';
   const selectedPlatform = searchParams?.platform || 'all';
