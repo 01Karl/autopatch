@@ -5,9 +5,9 @@
 body {@apply bg-[#f3f2f1] text-slate-900;}
 
 .azure-shell {@apply min-h-screen;}
-.top-header {@apply flex items-center gap-4 bg-[#0078d4] px-4 py-2 text-white;}
+.top-header {@apply flex items-center gap-4 bg-[#cc0000] px-4 py-2 text-white;}
 .brand {@apply text-sm font-semibold md:text-base;}
-.header-search {@apply hidden w-full max-w-xl rounded-sm border border-blue-300 bg-blue-50/90 px-3 py-1 text-sm text-slate-900 placeholder:text-slate-500 md:block;}
+.header-search {@apply hidden w-full max-w-xl rounded-sm border border-red-700 bg-red-50/95 px-3 py-1 text-sm text-slate-900 placeholder:text-slate-500 md:block;}
 .header-user {@apply ml-auto text-xs md:text-sm;}
 
 .shell-layout {@apply grid min-h-[calc(100vh-46px)] grid-cols-1 md:grid-cols-[230px_1fr];}
@@ -15,18 +15,18 @@ body {@apply bg-[#f3f2f1] text-slate-900;}
 .side-search {@apply mb-3 w-full rounded-sm border border-slate-300 bg-white px-2 py-1 text-xs;}
 .side-title {@apply mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500;}
 .side-link {@apply mb-1 flex items-center gap-2 rounded-md px-2 py-1.5 text-sm text-slate-700 hover:bg-slate-200/70;}
-.side-link.active {@apply bg-blue-100 font-medium text-blue-800;}
+.side-link.active {@apply bg-red-100 font-medium text-red-800;}
 .side-icon {@apply inline-flex w-5 justify-center text-xs;}
 .main-pane {@apply min-w-0;}
 
 .command-bar {@apply flex flex-col gap-2 border-b border-slate-300 bg-white px-4 py-2 md:flex-row md:items-center md:justify-between;}
 .command-left, .command-right {@apply flex flex-wrap gap-1;}
 .ghost-btn {@apply inline-flex items-center rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50;}
-.primary-btn {@apply inline-flex items-center justify-center rounded-md bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700;}
+.primary-btn {@apply inline-flex items-center justify-center rounded-md bg-red-700 px-3 py-2 text-sm font-medium text-white hover:bg-red-800;}
 
 .tabs-row {@apply flex flex-wrap gap-5 border-b border-slate-300 bg-white px-6 pt-3;}
 .tab {@apply border-b-2 border-transparent px-1 pb-2 text-sm text-slate-600;}
-.tab.active {@apply border-blue-600 font-medium text-slate-900;}
+.tab.active {@apply border-red-700 font-medium text-slate-900;}
 
 .content-area {@apply mx-auto max-w-7xl p-6;}
 .kpi-grid {@apply grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5;}
@@ -60,4 +60,31 @@ body {@apply bg-[#f3f2f1] text-slate-900;}
 table thead tr {@apply border-b border-slate-200 bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500;}
 table th {@apply px-3 py-2;}
 table td {@apply border-b border-slate-100 px-3 py-2;}
-.link {@apply text-blue-700 hover:underline;}
+.link {@apply text-red-700 hover:underline;}
+
+.machine-content-area {@apply mx-auto max-w-6xl space-y-3 p-4;}
+.machine-breadcrumbs {@apply flex flex-wrap items-center gap-2 text-xs text-slate-500;}
+.machine-breadcrumbs a {@apply text-slate-500 hover:text-slate-700;}
+.machine-title-row {@apply flex items-start justify-between border-b border-slate-200 pb-2;}
+.machine-title {@apply text-4xl font-semibold text-slate-800;}
+.machine-subtitle {@apply text-sm text-slate-500;}
+.machine-close-btn {@apply text-2xl text-slate-400 hover:text-slate-700;}
+.machine-actions-row {@apply flex flex-wrap gap-1 border-b border-slate-200 pb-2;}
+.machine-action {@apply inline-flex items-center rounded-sm border border-transparent px-2 py-1 text-xs text-slate-600 hover:bg-slate-100;}
+.machine-announcement {@apply rounded-sm border border-violet-200 bg-violet-50 px-3 py-2 text-xs text-slate-700;}
+.machine-tab-strip {@apply flex flex-wrap items-center gap-5 border-b border-slate-300 pt-2;}
+.machine-tab {@apply cursor-default border-b-2 border-transparent pb-2 text-sm text-slate-600;}
+.machine-tab.active {@apply border-red-700 font-medium text-slate-900;}
+.machine-card {@apply space-y-4 rounded-sm bg-white p-4;}
+.machine-section h2 {@apply text-lg font-semibold text-slate-800;}
+.machine-kv-inline {@apply mt-1 flex flex-wrap items-center gap-4 text-sm text-slate-600;}
+.machine-pill-row {@apply flex flex-wrap items-center gap-2 text-sm text-slate-600;}
+.machine-divider {@apply text-slate-300;}
+.machine-state-ok {@apply text-emerald-700;}
+.machine-state-off {@apply text-slate-500;}
+.machine-summary-grid {@apply grid grid-cols-1 gap-3 md:grid-cols-4;}
+.machine-summary-card {@apply rounded-sm border border-slate-200 bg-white p-3 shadow-sm;}
+.machine-summary-card p {@apply text-xs text-slate-500;}
+.machine-summary-card strong {@apply mt-1 block text-3xl text-slate-900;}
+.machine-filter-row {@apply flex flex-wrap items-center gap-2;}
+.machine-filter-chip {@apply rounded-sm border border-slate-300 bg-slate-50 px-2 py-1 text-xs text-slate-600;}

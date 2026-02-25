@@ -24,6 +24,12 @@ type MachinePageProps = {
   searchParams?: { env?: string; basePath?: string };
 };
 
+const updates = [
+  { name: 'Kernel security rollup', classification: 'Critical', severity: 'Critical', kb: 'LSA-2026-001', reboot: 'Requires reboot', published: '2026-01-18 03:10' },
+  { name: 'OpenSSL package refresh', classification: 'Security', severity: 'Important', kb: 'LSA-2026-017', reboot: 'No reboot', published: '2026-01-20 11:30' },
+  { name: 'Container runtime update', classification: 'Security', severity: 'Moderate', kb: 'LSA-2026-028', reboot: 'No reboot', published: '2026-02-02 07:50' }
+];
+
 export default function MachinePage({ params, searchParams }: MachinePageProps) {
   const selectedEnv = ENV_OPTIONS.includes(searchParams?.env as (typeof ENV_OPTIONS)[number])
     ? (searchParams?.env as (typeof ENV_OPTIONS)[number])
@@ -39,12 +45,6 @@ export default function MachinePage({ params, searchParams }: MachinePageProps) 
   const resourceType = server?.cluster === 'standalone' ? 'Bare metal server' : 'Virtual machine';
   const patchOrchestration = server?.cluster === 'standalone' ? 'Native package manager' : 'Agent managed rollout';
   const periodicAssessment = serverIndex % 2 === 0 ? 'Enabled' : 'Disabled';
-
-  const updates = [
-    { name: 'Kernel security rollup', classification: 'Security', severity: 'Critical', kb: 'LSA-2026-001', reboot: 'Requires reboot', published: '2026-01-18 03:10' },
-    { name: 'OpenSSL package refresh', classification: 'Critical', severity: 'Important', kb: 'LSA-2026-017', reboot: 'No reboot', published: '2026-01-20 11:30' },
-    { name: 'Container runtime update', classification: 'Other', severity: 'Moderate', kb: 'LSA-2026-028', reboot: 'No reboot', published: '2026-02-02 07:50' }
-  ];
 
   const criticalCount = updates.filter((u) => u.classification === 'Critical').length;
   const securityCount = updates.filter((u) => u.classification === 'Security').length;
@@ -65,92 +65,138 @@ export default function MachinePage({ params, searchParams }: MachinePageProps) 
             <span>Back to Machines</span>
           </a>
           <p className="side-title mt-4">Machine menu</p>
-          {['Overview', 'Security', 'Extensions', 'Configuration', 'Identity', 'Properties'].map((item) => (
+          {['Overview', 'Security', 'Advisor recommendations', 'Extensions', 'Continuous delivery', 'Configuration', 'Identity', 'Properties', 'Locks'].map((item) => (
             <span className="side-link" key={item}>{item}</span>
           ))}
 
           <p className="side-title mt-4">Operations</p>
-          {['Bastion', 'Backup', 'Disaster recovery', 'Updates', 'Inventory', 'Change tracking'].map((item) => (
+          {['Bastion', 'Auto-shutdown', 'Backup', 'Disaster recovery', 'Updates', 'Inventory', 'Change tracking'].map((item) => (
             <span className={`side-link ${item === 'Updates' ? 'active' : ''}`} key={item}>{item}</span>
           ))}
         </aside>
 
         <section className="main-pane">
-          <section className="command-bar">
-            <div className="command-left text-sm text-slate-500">Home / OpenPatch Update Manager / {machineName}</div>
-            <div className="command-right">
-              <button className="ghost-btn" type="button">Refresh</button>
-              <button className="ghost-btn" type="button">Check for updates</button>
-              <button className="ghost-btn" type="button">One-time update</button>
-              <button className="ghost-btn" type="button">Scheduled updates</button>
-              <button className="ghost-btn" type="button">Update settings</button>
+          <section className="machine-content-area">
+            <div className="machine-breadcrumbs">
+              <a href="/">Home</a>
+              <span>›</span>
+              <a href={`/?env=${selectedEnv}&view=machines&basePath=${selectedBasePath}`}>OpenPatch Update Manager</a>
+              <span>›</span>
+              <span>{machineName}</span>
             </div>
-          </section>
 
-          <section className="content-area space-y-4">
-            <div className="flex items-center justify-between">
+            <section className="machine-title-row">
               <div>
-                <h1 className="text-3xl font-semibold">{machineName} | Updates</h1>
-                <p className="text-sm text-slate-500">{resourceType} · {platform} / {distribution} · {selectedEnv.toUpperCase()}</p>
+                <h1 className="machine-title">⚙ {machineName} | Updates</h1>
+                <p className="machine-subtitle">{resourceType} · {platform} / {distribution} · {selectedEnv.toUpperCase()}</p>
               </div>
-              <span className="chip">OpenPatch managed updates view</span>
-            </div>
+              <button className="machine-close-btn" type="button">×</button>
+            </section>
+
+            <section className="machine-actions-row">
+              <button className="machine-action">Leave new experience</button>
+              <button className="machine-action">Refresh</button>
+              <button className="machine-action">Check for updates</button>
+              <button className="machine-action">One-time update</button>
+              <button className="machine-action">Scheduled updates</button>
+              <button className="machine-action">Update settings</button>
+              <button className="machine-action">OpenPatch Update Manager</button>
+            </section>
+
+            <section className="machine-announcement">
+              <p>Manage VM updates at scale with the new OpenPatch update orchestration flow. <a className="link" href={`/?env=${selectedEnv}&view=machines&basePath=${selectedBasePath}`}>Learn more</a></p>
+            </section>
 
             {!server && <p className="text-sm text-rose-700">Machine not found in inventory for selected environment.</p>}
 
-            <section className="info-banner">
-              <p className="text-sm text-slate-700">Manage machine updates at scale with OpenPatch policy-driven rollout.</p>
-              <a className="link" href={`/?env=${selectedEnv}&view=machines&basePath=${selectedBasePath}`}>Return to machine list</a>
+            <section className="machine-tab-strip">
+              <span className="machine-tab active">Recommended updates</span>
+              <span className="machine-tab">Update history</span>
+              <span className="machine-tab">Scheduling</span>
             </section>
 
-            <section className="tabs-row rounded-md border border-slate-200">
-              <span className="tab active">Recommended updates</span>
-              <span className="tab">Update history</span>
-              <span className="tab">Scheduling</span>
-            </section>
-
-            <section className="table-card p-4 space-y-4">
-              <div>
-                <h2 className="text-sm font-semibold">Infrastructure (host) updates</h2>
-                <p className="text-sm text-slate-500 mt-1">Maintenance timeline: <strong className="text-slate-700">No upcoming updates</strong></p>
-              </div>
-
-              <div>
-                <h2 className="text-sm font-semibold">Operating system (guest) updates</h2>
-                <div className="mt-2 flex flex-wrap gap-3 text-sm text-slate-600">
-                  <span>Periodic assessment: <strong className="text-emerald-700">{periodicAssessment}</strong></span>
-                  <span>Patch orchestration: <strong className="text-slate-800">{patchOrchestration}</strong></span>
-                  <span>Platform: <strong className="text-slate-800">{platform}</strong></span>
-                  <span>Distribution: <strong className="text-slate-800">{distribution}</strong></span>
-                  <span>Hotpatch: <strong className="text-slate-800">Disabled</strong></span>
+            <section className="machine-card">
+              <div className="machine-section">
+                <h2>Infrastructure (host) updates</h2>
+                <div className="machine-kv-inline">
+                  <span>Maintenance timeline ⓘ</span>
+                  <strong>No upcoming updates</strong>
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
-                <article className="kpi-card"><p className="kpi-title">Total updates</p><p className="kpi-value">{updates.length}</p></article>
-                <article className="kpi-card"><p className="kpi-title">Critical updates</p><p className="kpi-value text-amber-700">{criticalCount}</p></article>
-                <article className="kpi-card"><p className="kpi-title">Security updates</p><p className="kpi-value text-amber-700">{securityCount}</p></article>
-                <article className="kpi-card"><p className="kpi-title">Other updates</p><p className="kpi-value">{otherCount}</p></article>
+              <div className="machine-section">
+                <h2>Operating system (guest) updates</h2>
+                <div className="machine-pill-row">
+                  <span>Periodic assessment ⓘ</span>
+                  <span className="machine-state-ok">● {periodicAssessment}</span>
+                  <span className="machine-divider">|</span>
+                  <span>Patch orchestration ⓘ</span>
+                  <strong>{patchOrchestration}</strong>
+                  <span className="machine-divider">|</span>
+                  <span>Distribution ⓘ</span>
+                  <strong>{distribution}</strong>
+                  <span className="machine-divider">|</span>
+                  <span>Platform</span>
+                  <strong>{platform}</strong>
+                </div>
+                <div className="machine-pill-row mt-2">
+                  <span>Hotpatch ⓘ</span>
+                  <span className="machine-state-off">● Disabled</span>
+                </div>
               </div>
 
-              <div className="flex flex-wrap gap-2">
-                <span className="chip">Search by update name / KB</span>
-                <span className="chip">Classification: All</span>
-                <span className="chip">Severity (MSRC): All</span>
-                <span className="chip">Reboot required: All</span>
+              <div className="machine-summary-grid">
+                <article className="machine-summary-card">
+                  <p>Total updates ⓘ</p>
+                  <strong>{updates.length}</strong>
+                </article>
+                <article className="machine-summary-card">
+                  <p>Critical updates ⓘ</p>
+                  <strong className="text-amber-700">⚠ {criticalCount}</strong>
+                </article>
+                <article className="machine-summary-card">
+                  <p>Security updates ⓘ</p>
+                  <strong className="text-amber-700">⚠ {securityCount}</strong>
+                </article>
+                <article className="machine-summary-card">
+                  <p>Other updates ⓘ</p>
+                  <strong>● {otherCount}</strong>
+                </article>
               </div>
+
+              <p className="text-xs text-slate-500">Last assessed: 2026-02-22 15:12:24</p>
+
+              <div className="machine-filter-row">
+                <span className="machine-filter-chip">Search by update name, KB ID...</span>
+                <span className="machine-filter-chip">Classification : All</span>
+                <span className="machine-filter-chip">Severity (MSRC) : All</span>
+                <span className="machine-filter-chip">Reboot required : All</span>
+                <a className="ml-auto link" href="#">Open query</a>
+              </div>
+
+              <p className="text-sm text-slate-600">Showing {updates.length} of {updates.length} results</p>
 
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
                     <tr>
-                      <th>Update name</th><th>Classification</th><th>Severity</th><th>KB IDs</th><th>Reboot required</th><th>Published date</th>
+                      <th>Update name ↕</th>
+                      <th>Classification ↕</th>
+                      <th>Severity (MSRC) ↕</th>
+                      <th>KB IDs ↕</th>
+                      <th>Reboot required ↕</th>
+                      <th>Published date ↕</th>
                     </tr>
                   </thead>
                   <tbody>
                     {updates.map((update) => (
                       <tr key={update.kb}>
-                        <td>{update.name}</td><td>{update.classification}</td><td>{update.severity}</td><td>{update.kb}</td><td>{update.reboot}</td><td>{update.published}</td>
+                        <td>{update.name}</td>
+                        <td>{update.classification}</td>
+                        <td>{update.severity}</td>
+                        <td>{update.kb}</td>
+                        <td>{update.reboot}</td>
+                        <td>{update.published}</td>
                       </tr>
                     ))}
                   </tbody>
