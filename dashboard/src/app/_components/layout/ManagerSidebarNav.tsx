@@ -1,9 +1,9 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { IconType } from 'react-icons';
-import { FiChevronDown, FiCpu, FiFileText, FiHardDrive, FiHome, FiLayers, FiMonitor, FiPackage, FiPlayCircle, FiShield, FiSliders, FiTool } from 'react-icons/fi';
+import { FiChevronDown, FiCpu, FiFileText, FiHardDrive, FiHome, FiKey, FiLayers, FiMapPin, FiMonitor, FiPackage, FiPlayCircle, FiRefreshCw, FiSettings, FiShield, FiSliders, FiTool, FiUsers } from 'react-icons/fi';
 
 export type ManagerNavKey =
   | 'overview'
@@ -26,6 +26,18 @@ export type ManagerNavKey =
   | 'configure-playbooks'
   | 'configure-ansible'
   | 'configure-roles-variables'
+  | 'configuration'
+  | 'configuration-locations'
+  | 'configuration-organizations'
+  | 'configuration-settings'
+  | 'content'
+  | 'content-products'
+  | 'content-product-credentials'
+  | 'content-synchronization'
+  | 'content-lifecycle'
+  | 'content-lifecycle-environments'
+  | 'content-content-views'
+  | 'content-activation-keys'
   | 'history'
   | 'update-reports';
 
@@ -56,26 +68,15 @@ type ManagerSidebarNavProps = {
 
 const OVERVIEW_VIEWS: ManagerNavKey[] = ['overview', 'get-started', 'playbooks', 'machines', 'history', 'update-reports'];
 
+
+const SIDEBAR_OPEN_GROUPS_STORAGE_KEY = 'manager-sidebar-open-groups';
+
 const NAV_SECTIONS: NavSection[] = [
   {
     title: 'Manager',
     items: [
       { key: 'overview', label: 'Overview', icon: FiHome, href: (env, basePath) => `/?env=${env}&view=overview&basePath=${basePath}` },
       { key: 'get-started', label: 'Get started', icon: FiPlayCircle, href: (env, basePath) => `/?env=${env}&view=get-started&basePath=${basePath}` },
-    ],
-  },
-  {
-    title: 'Configure',
-    items: [
-      { key: 'configure-playbooks', label: 'Playbooks', icon: FiTool, href: (env) => `/configure/playbooks?env=${env}` },
-      {
-        key: 'configure-ansible',
-        label: 'Ansible',
-        icon: FiLayers,
-        children: [
-          { key: 'configure-roles-variables', label: 'Roles & Variables', href: (env) => `/configure/ansible/roles-variables?env=${env}` },
-        ],
-      },
     ],
   },
   {
@@ -115,6 +116,42 @@ const NAV_SECTIONS: NavSection[] = [
       },
     ],
   },
+  {
+    title: 'Content',
+    items: [
+      { key: 'content-products', label: 'Products', icon: FiPackage, href: (env) => `/content/products?env=${env}` },
+      { key: 'content-product-credentials', label: 'Product Credentials', icon: FiKey, href: (env) => `/content/product-credentials?env=${env}` },
+      { key: 'content-synchronization', label: 'Synchronization', icon: FiRefreshCw, href: (env) => `/content/synchronization?env=${env}` },
+      {
+        key: 'content-lifecycle',
+        label: 'Lifecycle',
+        icon: FiLayers,
+        children: [
+          { key: 'content-lifecycle-environments', label: 'Lifecycle environments', href: (env) => `/content/lifecycle/environments?env=${env}` },
+          { key: 'content-content-views', label: 'Content views', href: (env) => `/content/lifecycle/content-views?env=${env}` },
+          { key: 'content-activation-keys', label: 'Activation Keys', href: (env) => `/content/lifecycle/activation-keys?env=${env}` },
+        ],
+      },
+    ],
+  },
+  {
+    title: 'Configuration',
+    items: [
+      {
+        key: 'configuration',
+        label: 'Configuration',
+        icon: FiSettings,
+        children: [
+          { key: 'configure-playbooks', label: 'Playbooks', href: (env) => `/configure/playbooks?env=${env}` },
+          { key: 'configure-ansible', label: 'Ansible', href: (env) => `/configure/ansible?env=${env}` },
+          { key: 'configure-roles-variables', label: 'Roles & Variables', href: (env) => `/configure/ansible/roles-variables?env=${env}` },
+          { key: 'configuration-locations', label: 'Locations', href: (env) => `/configuration/locations?env=${env}` },
+          { key: 'configuration-organizations', label: 'Organizations', href: (env) => `/configuration/organizations?env=${env}` },
+          { key: 'configuration-settings', label: 'Settings', href: (env) => `/configuration/settings?env=${env}` },
+        ],
+      },
+    ],
+  },
 ];
 
 export function isValidManagerNavKey(view?: string): view is ManagerNavKey {
@@ -122,7 +159,42 @@ export function isValidManagerNavKey(view?: string): view is ManagerNavKey {
 }
 
 export default function ManagerSidebarNav({ activeView, selectedEnv, selectedBasePath }: ManagerSidebarNavProps) {
-  const [openGroups, setOpenGroups] = useState<Partial<Record<ManagerNavKey, boolean>>>({});
+  const parentKeyForActiveView = useMemo(() => (
+    NAV_SECTIONS
+      .flatMap((section) => section.items)
+      .find((item) => item.children?.some((child) => child.key === activeView))?.key
+  ), [activeView]);
+
+  const [openGroups, setOpenGroups] = useState<Partial<Record<ManagerNavKey, boolean>>>({
+    ...(parentKeyForActiveView ? { [parentKeyForActiveView]: true } : {}),
+  });
+
+  useEffect(() => {
+    const storedGroups = window.localStorage.getItem(SIDEBAR_OPEN_GROUPS_STORAGE_KEY);
+
+    if (!storedGroups) {
+      return;
+    }
+
+    try {
+      const parsedGroups = JSON.parse(storedGroups) as Partial<Record<ManagerNavKey, boolean>>;
+      setOpenGroups((prev) => ({ ...parsedGroups, ...prev }));
+    } catch {
+      // Ignore invalid localStorage content and use defaults.
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!parentKeyForActiveView) {
+      return;
+    }
+
+    setOpenGroups((prev) => ({ ...prev, [parentKeyForActiveView]: true }));
+  }, [parentKeyForActiveView]);
+
+  useEffect(() => {
+    window.localStorage.setItem(SIDEBAR_OPEN_GROUPS_STORAGE_KEY, JSON.stringify(openGroups));
+  }, [openGroups]);
 
   const toggleGroup = (key: ManagerNavKey) => {
     setOpenGroups((prev) => ({ ...prev, [key]: !prev[key] }));
@@ -162,8 +234,16 @@ export default function ManagerSidebarNav({ activeView, selectedEnv, selectedBas
                         {child.key === 'machines-register' && <FiFileText className="h-3.5 w-3.5" />}
                         {child.key === 'machines-all' && <FiMonitor className="h-3.5 w-3.5" />}
                         {child.key.startsWith('compliance-') && <FiSliders className="h-3.5 w-3.5" />}
+                        {child.key === 'configure-playbooks' && <FiTool className="h-3.5 w-3.5" />}
+                        {child.key === 'configure-ansible' && <FiLayers className="h-3.5 w-3.5" />}
                         {child.key === 'configure-roles-variables' && <FiLayers className="h-3.5 w-3.5" />}
                         {child.key.startsWith('provisioning-') && <FiCpu className="h-3.5 w-3.5" />}
+                        {child.key === 'configuration-locations' && <FiMapPin className="h-3.5 w-3.5" />}
+                        {child.key === 'configuration-organizations' && <FiUsers className="h-3.5 w-3.5" />}
+                        {child.key === 'configuration-settings' && <FiSettings className="h-3.5 w-3.5" />}
+                        {child.key === 'content-lifecycle-environments' && <FiLayers className="h-3.5 w-3.5" />}
+                        {child.key === 'content-content-views' && <FiFileText className="h-3.5 w-3.5" />}
+                        {child.key === 'content-activation-keys' && <FiKey className="h-3.5 w-3.5" />}
                         <span>{child.label}</span>
                       </Link>
                     ))}

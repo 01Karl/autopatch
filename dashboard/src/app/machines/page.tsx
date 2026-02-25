@@ -1,4 +1,4 @@
-import { FiCpu, FiMapPin, FiRefreshCw, FiShield, FiUsers } from 'react-icons/fi';
+import { FiCpu, FiHardDrive, FiMapPin, FiMonitor, FiRefreshCw, FiShield, FiUsers } from 'react-icons/fi';
 import { getMockMachines, MachineEnv } from '@/lib/machines';
 import ManagerSidebarNav from '@/app/_components/layout/ManagerSidebarNav';
 import LinkTabs from '@/app/_components/ui/LinkTabs';
@@ -46,6 +46,19 @@ function getViewMode(view?: string): ViewMode {
   return view === 'grid' ? 'grid' : 'list';
 }
 
+
+function isBareMetalMachine(cluster: string): boolean {
+  return cluster === 'standalone';
+}
+
+function MachineTypeIcon({ cluster }: { cluster: string }) {
+  if (isBareMetalMachine(cluster)) {
+    return <FiHardDrive className="h-4 w-4 text-amber-600" aria-label="Baremetal" title="Baremetal" />;
+  }
+
+  return <FiMonitor className="h-4 w-4 text-sky-600" aria-label="Virtuell maskin" title="Virtuell maskin" />;
+}
+
 export default function MachinesPage({ searchParams }: { searchParams?: SearchParams }) {
   const selectedEnv = ENV_OPTIONS.includes(searchParams?.env as 'all' | MachineEnv) ? (searchParams?.env as 'all' | MachineEnv) : 'prod';
   const selectedCriticality = searchParams?.criticality || 'all';
@@ -89,7 +102,7 @@ export default function MachinesPage({ searchParams }: { searchParams?: SearchPa
       <input id="column-drawer-toggle" type="checkbox" className="peer sr-only" />
 
       <header className="top-header">
-        <div className="brand">Overseer Console</div>
+        <div className="brand">Overseer Infrastructure Manager</div>
         <input className="header-search" placeholder="Search resources, services and docs" />
         <div className="header-user">Overseer · {pageSectionLabel}</div>
       </header>
@@ -189,7 +202,14 @@ export default function MachinesPage({ searchParams }: { searchParams?: SearchPa
                     <tbody>
                       {filtered.map((machine) => (
                         <tr key={`${machine.env}-${machine.hostname}`}>
-                          {selectedColumnSet.has('hostname') && <td><a className="link font-medium" href={`/machines/${encodeURIComponent(machine.hostname)}/overview?env=${machine.env}&basePath=environments`}>{machine.hostname}</a></td>}
+                          {selectedColumnSet.has('hostname') && (
+                            <td>
+                              <a className="link inline-flex items-center gap-2 font-medium" href={`/machines/${encodeURIComponent(machine.hostname)}/overview?env=${machine.env}&basePath=environments`}>
+                                <MachineTypeIcon cluster={machine.cluster} />
+                                {machine.hostname}
+                              </a>
+                            </td>
+                          )}
                           {selectedColumnSet.has('env') && <td>{machine.env.toUpperCase()}</td>}
                           {selectedColumnSet.has('cluster') && <td>{machine.cluster}</td>}
                           {selectedColumnSet.has('uuid') && <td className="font-mono text-xs text-slate-600">{machine.metadata.uuid}</td>}
@@ -211,7 +231,10 @@ export default function MachinesPage({ searchParams }: { searchParams?: SearchPa
                 <div className="grid gap-3 p-4 md:grid-cols-2 xl:grid-cols-3">
                   {filtered.map((machine) => (
                     <article key={`${machine.env}-${machine.hostname}`} className="rounded-lg border border-slate-200 bg-white p-4 text-sm shadow-sm">
-                      <a className="link text-base font-semibold" href={`/machines/${encodeURIComponent(machine.hostname)}/overview?env=${machine.env}&basePath=environments`}>{machine.hostname}</a>
+                      <a className="link inline-flex items-center gap-2 text-base font-semibold" href={`/machines/${encodeURIComponent(machine.hostname)}/overview?env=${machine.env}&basePath=environments`}>
+                        <MachineTypeIcon cluster={machine.cluster} />
+                        {machine.hostname}
+                      </a>
                       <dl className="mt-3 space-y-1">
                         {selectedColumnSet.has('env') && <div className="flex justify-between gap-2"><dt className="text-slate-500">Env</dt><dd>{machine.env.toUpperCase()}</dd></div>}
                         {selectedColumnSet.has('cluster') && <div className="flex justify-between gap-2"><dt className="text-slate-500">Cluster</dt><dd>{machine.cluster}</dd></div>}

@@ -104,7 +104,7 @@ export default function MachineShell({
   return (
     <main className="azure-shell">
       <header className="top-header">
-        <div className="brand">Overseer Console</div>
+        <div className="brand">Overseer Infrastructure Manager</div>
         <input className="header-search" placeholder="Search machines, updates and docs" />
         <div className="header-user">Connie Wilson · CONTOSO</div>
       </header>
