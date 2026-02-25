@@ -25,6 +25,7 @@ export type MachinePageSearchParams = {
   env?: string;
   basePath?: string;
   content?: string;
+  logView?: string;
 };
 
 export function getPlatformAndDistribution(index: number) {
@@ -54,6 +55,12 @@ export function getMachineContext(machineNameParam: string, searchParams?: Machi
     searchParams?.content === 'repository-sets'
       ? searchParams.content
       : 'packages';
+  const logView =
+    searchParams?.logView === 'journal' ||
+    searchParams?.logView === 'snapshot' ||
+    searchParams?.logView === 'alerts'
+      ? searchParams.logView
+      : 'overview';
 
   const inventory = loadInventorySummary(selectedEnv, selectedBasePath);
   const machineName = decodeURIComponent(machineNameParam);
@@ -69,6 +76,7 @@ export function getMachineContext(machineNameParam: string, searchParams?: Machi
     selectedEnv,
     selectedBasePath,
     contentTab,
+    logView,
     inventory,
     machineName,
     serverIndex,

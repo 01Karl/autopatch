@@ -18,7 +18,7 @@ export default function MachineLogsPage({ params, searchParams }: Props) {
           <p className="text-sm text-slate-500">Välj loggtyp, öppna hela loggfiler och markera rader som sticker ut. Täcker boot, secure/auth, chrony, cups, httpd, journal och lastlog.</p>
         </div>
 
-        <LogsWorkbench categories={linuxLogCategories.map((category) => ({ ...category }))} files={linuxLogFiles.map((file) => ({ ...file }))} insights={logInsights.map((insight) => ({ ...insight }))} />
+        <LogsWorkbench view={context.logView} categories={linuxLogCategories.map((category) => ({ ...category }))} files={linuxLogFiles.map((file) => ({ ...file }))} insights={logInsights.map((insight) => ({ ...insight }))} />
       </section>
     </MachineShell>
   );

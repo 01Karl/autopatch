@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 type Category = {
   key: string;
@@ -34,6 +34,7 @@ type Props = {
   categories: Category[];
   files: LogFile[];
   insights: LogInsight[];
+  view: 'overview' | 'journal' | 'snapshot' | 'alerts';
 };
 
 function levelClass(level: string) {
@@ -47,7 +48,7 @@ function sortArrow(active: boolean, direction: 'asc' | 'desc') {
   return direction === 'asc' ? '↑' : '↓';
 }
 
-export default function LogsWorkbench({ categories, files, insights }: Props) {
+export default function LogsWorkbench({ categories, files, insights, view }: Props) {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedFileId, setSelectedFileId] = useState<string>(files[0]?.id ?? '');
   const [searchTerm, setSearchTerm] = useState('');
@@ -101,6 +102,36 @@ export default function LogsWorkbench({ categories, files, insights }: Props) {
     });
   }, [insights, sortDirection, sortKey]);
 
+
+  useEffect(() => {
+    if (view === 'journal') {
+      setSelectedCategory('system');
+      const systemLog = files.find((file) => file.id === 'boot-log') ?? files[0];
+      if (systemLog) setSelectedFileId(systemLog.id);
+      setSortKey('latest');
+      setSortDirection('desc');
+      return;
+    }
+
+    if (view === 'snapshot') {
+      setSelectedCategory('all');
+      setSortKey('count');
+      setSortDirection('desc');
+      return;
+    }
+
+    if (view === 'alerts') {
+      setSelectedCategory('security');
+      const secureLog = files.find((file) => file.id === 'secure-log') ?? files[0];
+      if (secureLog) setSelectedFileId(secureLog.id);
+      setSortKey('level');
+      setSortDirection('asc');
+      return;
+    }
+
+    setSelectedCategory('all');
+  }, [files, view]);
+
   const setSort = (key: SortKey) => {
     if (sortKey === key) {
       setSortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc'));
@@ -113,6 +144,13 @@ export default function LogsWorkbench({ categories, files, insights }: Props) {
 
   return (
     <section className="space-y-4">
+      <div className="rounded-md border border-slate-200 bg-white p-4 text-sm text-slate-600">
+        {view === 'overview' && <p>Overview mode: sammanställd signalbild för alla loggar.</p>}
+        {view === 'journal' && <p>Journal query mode: fokus på system- och bootrelaterade händelser.</p>}
+        {view === 'snapshot' && <p>Snapshot export mode: sorterar signaler efter volym för snabb exportprioritering.</p>}
+        {view === 'alerts' && <p>Alert rules mode: fokus på security-signaler och avvikelser.</p>}
+      </div>
+
       <div className="machine-summary-grid">
         <article className="machine-summary-card"><p>Total signals (24h)</p><strong>{insights.reduce((sum, item) => sum + item.count, 0)}</strong></article>
         <article className="machine-summary-card"><p>Critical events</p><strong className="text-rose-700">{insights.filter((item) => item.level === 'Critical').length}</strong></article>

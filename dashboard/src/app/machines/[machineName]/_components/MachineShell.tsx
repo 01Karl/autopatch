@@ -13,6 +13,7 @@ type Props = {
   platform: string;
   distribution: string;
   contentTab?: ContentTab;
+  logView?: 'overview' | 'journal' | 'snapshot' | 'alerts';
   children: ReactNode;
 };
 
@@ -21,6 +22,13 @@ const updatesTabs: { id: ContentTab; label: string }[] = [
   { id: 'errata', label: 'Errata' },
   { id: 'module-streams', label: 'Module streams' },
   { id: 'repository-sets', label: 'Repository sets' }
+];
+
+const logsTabs: { id: 'overview' | 'journal' | 'snapshot' | 'alerts'; label: string }[] = [
+  { id: 'overview', label: 'Overview' },
+  { id: 'journal', label: 'Journal query' },
+  { id: 'snapshot', label: 'Snapshot export' },
+  { id: 'alerts', label: 'Alert rules' }
 ];
 
 const sectionTitles: Record<MachineSection, string> = {
@@ -49,6 +57,7 @@ export default function MachineShell({
   platform,
   distribution,
   contentTab,
+  logView,
   children
 }: Props) {
   const machineMenuGroups: { heading: string; items: { key: MachineSection; label: string; icon: typeof FiActivity }[] }[] = [
@@ -164,7 +173,7 @@ export default function MachineShell({
                   {updatesTabs.map((tab) => (
                     <a
                       key={tab.id}
-                      className={`machine-action ${contentTab === tab.id ? 'active' : ''}`}
+                      className={`machine-content-tab ${contentTab === tab.id ? 'active' : ''}`}
                       href={`${machineBasePath}/updates?${machineQuery}&content=${tab.id}`}
                     >
                       {tab.label}
@@ -178,10 +187,15 @@ export default function MachineShell({
               <>
                 <p className="pane-context-text">Log analysis workflow · välj loggfil, filtrera signaler och sortera fynd för snabb triagering.</p>
                 <section className="machine-actions-row">
-                  <button className="machine-action" type="button">Refresh logs</button>
-                  <button className="machine-action" type="button">Open journal query</button>
-                  <button className="machine-action" type="button">Export snapshot</button>
-                  <button className="machine-action" type="button">Create alert rule</button>
+                  {logsTabs.map((tab) => (
+                    <a
+                      key={tab.id}
+                      className={`machine-content-tab ${logView === tab.id ? 'active' : ''}`}
+                      href={`${machineBasePath}/logs?${machineQuery}&logView=${tab.id}`}
+                    >
+                      {tab.label}
+                    </a>
+                  ))}
                 </section>
               </>
             )}
