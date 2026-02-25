@@ -28,6 +28,8 @@ type LogInsight = {
   latest: string;
 };
 
+type SortKey = 'source' | 'signal' | 'level' | 'count' | 'latest';
+
 type Props = {
   categories: Category[];
   files: LogFile[];
@@ -40,10 +42,17 @@ function levelClass(level: string) {
   return 'text-slate-700 bg-slate-100 border-slate-200';
 }
 
+function sortArrow(active: boolean, direction: 'asc' | 'desc') {
+  if (!active) return '↕';
+  return direction === 'asc' ? '↑' : '↓';
+}
+
 export default function LogsWorkbench({ categories, files, insights }: Props) {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedFileId, setSelectedFileId] = useState<string>(files[0]?.id ?? '');
   const [searchTerm, setSearchTerm] = useState('');
+  const [sortKey, setSortKey] = useState<SortKey>('latest');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
 
   const filteredFiles = useMemo(() => {
     if (selectedCategory === 'all') return files;
@@ -78,6 +87,29 @@ export default function LogsWorkbench({ categories, files, insights }: Props) {
       })
       .filter((entry): entry is { line: string; lineNumber: number; hitTerms: readonly string[]; isSearchMatch: boolean } => Boolean(entry));
   }, [searchTerm, selectedFile]);
+
+  const sortedInsights = useMemo(() => {
+    return [...insights].sort((a, b) => {
+      const direction = sortDirection === 'asc' ? 1 : -1;
+      if (sortKey === 'count') return (a.count - b.count) * direction;
+
+      const left = String(a[sortKey]).toLowerCase();
+      const right = String(b[sortKey]).toLowerCase();
+      if (left < right) return -1 * direction;
+      if (left > right) return 1 * direction;
+      return 0;
+    });
+  }, [insights, sortDirection, sortKey]);
+
+  const setSort = (key: SortKey) => {
+    if (sortKey === key) {
+      setSortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc'));
+      return;
+    }
+
+    setSortKey(key);
+    setSortDirection(key === 'count' ? 'desc' : 'asc');
+  };
 
   return (
     <section className="space-y-4">
@@ -182,10 +214,16 @@ export default function LogsWorkbench({ categories, files, insights }: Props) {
         <h3 className="mb-2 text-sm font-semibold text-slate-700">Detected signals</h3>
         <table className="w-full text-sm">
           <thead>
-            <tr><th>Source</th><th>Signal</th><th>Level</th><th>Count</th><th>Latest occurrence</th></tr>
+            <tr>
+              <th><button type="button" onClick={() => setSort('source')}>Source {sortArrow(sortKey === 'source', sortDirection)}</button></th>
+              <th><button type="button" onClick={() => setSort('signal')}>Signal {sortArrow(sortKey === 'signal', sortDirection)}</button></th>
+              <th><button type="button" onClick={() => setSort('level')}>Level {sortArrow(sortKey === 'level', sortDirection)}</button></th>
+              <th><button type="button" onClick={() => setSort('count')}>Count {sortArrow(sortKey === 'count', sortDirection)}</button></th>
+              <th><button type="button" onClick={() => setSort('latest')}>Latest occurrence {sortArrow(sortKey === 'latest', sortDirection)}</button></th>
+            </tr>
           </thead>
           <tbody>
-            {insights.map((entry) => (
+            {sortedInsights.map((entry) => (
               <tr key={`${entry.source}-${entry.signal}`}>
                 <td>{entry.source}</td>
                 <td>{entry.signal}</td>

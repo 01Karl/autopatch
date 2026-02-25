@@ -1,17 +1,10 @@
 import MachineShell from '../_components/MachineShell';
-import { ContentTab, errata, getMachineContext, MachinePageSearchParams, moduleStreams, repositorySets, updates } from '../_lib/machine-data';
+import { errata, getMachineContext, MachinePageSearchParams, moduleStreams, repositorySets, updates } from '../_lib/machine-data';
 
 type Props = {
   params: { machineName: string };
   searchParams?: MachinePageSearchParams;
 };
-
-const contentTabs: { id: ContentTab; label: string }[] = [
-  { id: 'packages', label: 'Packages' },
-  { id: 'errata', label: 'Errata' },
-  { id: 'module-streams', label: 'Module streams' },
-  { id: 'repository-sets', label: 'Repository sets' }
-];
 
 export default function MachineUpdatesPage({ params, searchParams }: Props) {
   const context = getMachineContext(params.machineName, searchParams);
@@ -43,17 +36,6 @@ export default function MachineUpdatesPage({ params, searchParams }: Props) {
 
         <p className="text-xs text-slate-500">Last assessed: 2026-02-22 15:12:24</p>
 
-        <section className="machine-content-tabs">
-          {contentTabs.map((tabItem) => (
-            <a
-              key={tabItem.id}
-              className={`machine-content-tab ${context.contentTab === tabItem.id ? 'active' : ''}`}
-              href={`${context.machineBasePath}/updates?${context.machineQuery}&content=${tabItem.id}`}
-            >
-              {tabItem.label}
-            </a>
-          ))}
-        </section>
 
         {context.contentTab === 'packages' && (
           <>

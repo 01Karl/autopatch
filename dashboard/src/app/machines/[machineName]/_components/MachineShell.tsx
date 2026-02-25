@@ -1,6 +1,6 @@
 import { ReactNode } from 'react';
 import { FiActivity, FiArrowLeft, FiBox, FiCheckCircle, FiClock, FiCpu, FiDatabase, FiFileText, FiHardDrive, FiKey, FiLock, FiRefreshCw, FiSettings, FiShield, FiSliders, FiTool, FiUser } from 'react-icons/fi';
-import { MachineSection } from '../_lib/machine-data';
+import { ContentTab, MachineSection } from '../_lib/machine-data';
 
 type Props = {
   activeSection: MachineSection;
@@ -12,7 +12,30 @@ type Props = {
   resourceType: string;
   platform: string;
   distribution: string;
+  contentTab?: ContentTab;
   children: ReactNode;
+};
+
+const updatesTabs: { id: ContentTab; label: string }[] = [
+  { id: 'packages', label: 'Packages' },
+  { id: 'errata', label: 'Errata' },
+  { id: 'module-streams', label: 'Module streams' },
+  { id: 'repository-sets', label: 'Repository sets' }
+];
+
+const sectionTitles: Record<MachineSection, string> = {
+  overview: 'Overview',
+  updates: 'Updates',
+  security: 'Security',
+  'repository-trust': 'Repository trust',
+  logs: 'Logs',
+  'advisor-recommendations': 'Advisor recommendations',
+  extensions: 'Extensions',
+  'continuous-delivery': 'Continuous delivery',
+  configuration: 'Configuration',
+  identity: 'Identity',
+  properties: 'Properties',
+  locks: 'Locks'
 };
 
 export default function MachineShell({
@@ -25,6 +48,7 @@ export default function MachineShell({
   resourceType,
   platform,
   distribution,
+  contentTab,
   children
 }: Props) {
   const machineMenuGroups: { heading: string; items: { key: MachineSection; label: string; icon: typeof FiActivity }[] }[] = [
@@ -83,8 +107,8 @@ export default function MachineShell({
           <span>›</span>
           <span>{machineName}</span>
         </div>
-        <h1 className="shell-page-title">Overseer Update Manager</h1>
-        <p className="shell-page-subtitle">Machine details and update operations for {machineName}.</p>
+        <h1 className="shell-page-title">Overseer Machine Manager</h1>
+        <p className="shell-page-subtitle">Machine details and operational views for {machineName}.</p>
       </section>
 
       <div className="shell-layout">
@@ -127,27 +151,44 @@ export default function MachineShell({
           <section className="machine-content-area">
             <section className="machine-title-row">
               <div>
-                <h1 className="machine-title">⚙ {machineName} | Updates</h1>
-                <p className="machine-subtitle">{resourceType} · {platform} / {distribution} · {selectedEnv.toUpperCase()}</p>
+                <h1 className="machine-title">⚙ {machineName} | {sectionTitles[activeSection]}</h1>
+                <p className="machine-subtitle">{resourceType} · {platform} / {distribution} · {selectedEnv.toUpperCase()} · {selectedBasePath}</p>
               </div>
               <button className="machine-close-btn" type="button">×</button>
             </section>
 
-            <p className="pane-context-text">Machine workflow · Use refresh, update checks, one-time update and scheduling actions from the command row below.</p>
+            {activeSection === 'updates' && (
+              <>
+                <p className="pane-context-text">Update content views · switch between package-, errata- och repositoryfokuserade vyer.</p>
+                <section className="machine-actions-row">
+                  {updatesTabs.map((tab) => (
+                    <a
+                      key={tab.id}
+                      className={`machine-action ${contentTab === tab.id ? 'active' : ''}`}
+                      href={`${machineBasePath}/updates?${machineQuery}&content=${tab.id}`}
+                    >
+                      {tab.label}
+                    </a>
+                  ))}
+                </section>
+              </>
+            )}
 
-            <section className="machine-actions-row">
-              <button className="machine-action">Leave new experience</button>
-              <button className="machine-action">Refresh</button>
-              <button className="machine-action">Check for updates</button>
-              <button className="machine-action">One-time update</button>
-              <button className="machine-action">Scheduled updates</button>
-              <button className="machine-action">Update settings</button>
-              <button className="machine-action">Overseer Update Manager</button>
-            </section>
+            {activeSection === 'logs' && (
+              <>
+                <p className="pane-context-text">Log analysis workflow · välj loggfil, filtrera signaler och sortera fynd för snabb triagering.</p>
+                <section className="machine-actions-row">
+                  <button className="machine-action" type="button">Refresh logs</button>
+                  <button className="machine-action" type="button">Open journal query</button>
+                  <button className="machine-action" type="button">Export snapshot</button>
+                  <button className="machine-action" type="button">Create alert rule</button>
+                </section>
+              </>
+            )}
 
-            <section className="machine-announcement">
-              <p>Manage VM updates at scale with the new Overseer update orchestration flow. <a className="link" href={`/machines?env=${selectedEnv}`}>Learn more</a></p>
-            </section>
+            {activeSection !== 'updates' && activeSection !== 'logs' && (
+              <p className="pane-context-text">Machine workflow for {sectionTitles[activeSection].toLowerCase()}.</p>
+            )}
 
             {children}
           </section>
