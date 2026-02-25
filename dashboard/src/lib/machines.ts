@@ -15,6 +15,7 @@ export type MachineMetadata = {
   osVersion: string;
   compliance: string;
   maintenanceGroup: string;
+  uuid: string;
 };
 
 export type MachineListItem = {
@@ -39,7 +40,8 @@ const defaultMetadata: MachineMetadata = {
   lastSeen: '2026-02-25 02:00',
   osVersion: 'RHEL 9.4',
   compliance: 'Compliant',
-  maintenanceGroup: 'standalone'
+  maintenanceGroup: 'standalone',
+  uuid: '00000000-0000-0000-0000-000000000000'
 };
 
 export function getMockMachines(env: 'all' | MachineEnv): MachineListItem[] {
