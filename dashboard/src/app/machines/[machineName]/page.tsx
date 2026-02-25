@@ -63,7 +63,7 @@ export default function MachinePage({ params, searchParams }: MachinePageProps) 
     ? (searchParams?.env as (typeof ENV_OPTIONS)[number])
     : 'prod';
   const selectedBasePath = searchParams?.basePath || DEFAULT_BASE_PATH;
-  const activeTab: MachineTab = searchParams?.tab === 'capabilities' || searchParams?.tab === 'recommendations' || searchParams?.tab === 'tutorials' ? searchParams.tab : 'properties';
+  const activeTab: MachineTab = searchParams?.tab === 'properties' || searchParams?.tab === 'recommendations' || searchParams?.tab === 'tutorials' ? searchParams.tab : 'capabilities';
   const contentTab: ContentTab =
     searchParams?.content === 'errata' ||
     searchParams?.content === 'module-streams' ||
@@ -97,6 +97,23 @@ export default function MachinePage({ params, searchParams }: MachinePageProps) 
     { id: 'errata', label: 'Errata' },
     { id: 'module-streams', label: 'Module streams' },
     { id: 'repository-sets', label: 'Repository sets' }
+  ];
+
+  const essentials = [
+    { label: 'Computer name', value: machineName },
+    { label: 'FQDN', value: server?.fqdn || `${machineName}.${selectedEnv}.local` },
+    { label: 'Operating system', value: distribution },
+    { label: 'Operating system version', value: platform === 'Linux' ? 'Kernel 5.15 LTS' : 'Kernel N/A' },
+    { label: 'Manufacturer', value: resourceType === 'Virtual machine' ? 'VMware, Inc.' : 'Dell Technologies' },
+    { label: 'Model', value: resourceType === 'Virtual machine' ? 'VMware Virtual Platform' : 'PowerEdge R760' }
+  ];
+
+  const capabilityCards = [
+    { title: 'Updates', description: 'Customize updates and periodic patching for this machine.', state: 'Periodic assessment enabled' },
+    { title: 'Logs', description: 'Collect and inspect machine logs for troubleshooting.', state: 'Configured' },
+    { title: 'Insights', description: 'Enable monitoring insights for health and performance.', state: 'Connected' },
+    { title: 'Security', description: 'Monitor vulnerabilities and hardening recommendations.', state: 'Monitored' },
+    { title: 'Policies', description: 'Apply policy controls and compliance baselines.', state: 'Assigned' }
   ];
 
   const machineMenuItems = [
@@ -197,18 +214,19 @@ export default function MachinePage({ params, searchParams }: MachinePageProps) 
 
             {!server && <p className="text-sm text-rose-700">Machine not found in inventory for selected environment.</p>}
 
-            <section className="machine-card">
-              <div className="machine-section">
-                <h2>Overview</h2>
-                <p className="text-sm text-slate-500">Essentials för vald maskin.</p>
+            <section className="machine-card space-y-4">
+              <div className="flex items-center justify-between">
+                <h2 className="text-lg font-semibold">Essentials</h2>
+                <a className="link text-sm" href="#">JSON View</a>
               </div>
-              <div className="machine-summary-grid">
-                <article className="machine-summary-card"><p>Computer name</p><strong>{machineName}</strong></article>
-                <article className="machine-summary-card"><p>FQDN</p><strong>{server?.fqdn || `${machineName}.${selectedEnv}.local`}</strong></article>
-                <article className="machine-summary-card"><p>Operating System</p><strong>{platform}</strong></article>
-                <article className="machine-summary-card"><p>Operating system version</p><strong>{distribution}</strong></article>
-                <article className="machine-summary-card"><p>Manufacturer</p><strong>{resourceType === 'Virtual machine' ? 'Contoso Virtualization' : 'Dell Technologies'}</strong></article>
-                <article className="machine-summary-card"><p>Model</p><strong>{resourceType === 'Virtual machine' ? 'KVM Guest' : 'PowerEdge R760'}</strong></article>
+              <div className="grid gap-x-16 gap-y-3 md:grid-cols-2">
+                {essentials.map((item) => (
+                  <div key={item.label} className="flex items-start gap-3 text-sm">
+                    <span className="min-w-[190px] text-slate-600">{item.label}</span>
+                    <span className="text-slate-400">:</span>
+                    <strong className="font-medium text-slate-900">{item.value}</strong>
+                  </div>
+                ))}
               </div>
             </section>
 
@@ -434,17 +452,15 @@ export default function MachinePage({ params, searchParams }: MachinePageProps) 
               </section>
             )}
             {activeTab === 'capabilities' && (
-              <section className="machine-card space-y-4">
-                <div className="machine-section">
-                  <h2>Capabilities</h2>
-                  <p className="text-sm text-slate-500">Tillgängliga funktioner för {machineName}.</p>
-                </div>
-                <div className="machine-summary-grid">
-                  <article className="machine-summary-card"><p>Updates</p><strong>Enabled</strong></article>
-                  <article className="machine-summary-card"><p>Logs</p><strong>Available</strong></article>
-                  <article className="machine-summary-card"><p>Insights</p><strong>Connected</strong></article>
-                  <article className="machine-summary-card"><p>Security</p><strong>Monitored</strong></article>
-                  <article className="machine-summary-card"><p>Policies</p><strong>Assigned</strong></article>
+              <section className="space-y-4">
+                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                  {capabilityCards.map((card) => (
+                    <article key={card.title} className="rounded-md border border-slate-200 bg-white p-5 shadow-sm">
+                      <h3 className="text-2xl font-semibold text-slate-800">{card.title}</h3>
+                      <p className="mt-3 text-base text-slate-600">{card.description}</p>
+                      <p className="mt-6 text-sm text-slate-700">● {card.state}</p>
+                    </article>
+                  ))}
                 </div>
               </section>
             )}
