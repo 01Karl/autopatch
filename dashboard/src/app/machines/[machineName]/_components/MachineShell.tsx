@@ -62,7 +62,7 @@ export default function MachineShell({
         <div className="shell-page-breadcrumbs">
           <a href="/">Home</a>
           <span>›</span>
-          <a href={`/?env=${selectedEnv}&view=machines&basePath=${selectedBasePath}`}>Machines</a>
+          <a href={`/machines?env=${selectedEnv}`}>Machines</a>
           <span>›</span>
           <span>{machineName}</span>
         </div>
@@ -72,7 +72,7 @@ export default function MachineShell({
 
       <div className="shell-layout">
         <aside className="side-nav machine-side-nav">
-          <a className="side-link" href={`/?env=${selectedEnv}&view=machines&basePath=${selectedBasePath}`}>
+          <a className="side-link" href={`/machines?env=${selectedEnv}`}>
             <span className="side-icon"><FiArrowLeft /></span>
             <span>Back to Machines</span>
           </a>
@@ -127,7 +127,7 @@ export default function MachineShell({
             </section>
 
             <section className="machine-announcement">
-              <p>Manage VM updates at scale with the new Overseer update orchestration flow. <a className="link" href={`/?env=${selectedEnv}&view=machines&basePath=${selectedBasePath}`}>Learn more</a></p>
+              <p>Manage VM updates at scale with the new Overseer update orchestration flow. <a className="link" href={`/machines?env=${selectedEnv}`}>Learn more</a></p>
             </section>
 
             {children}

@@ -258,10 +258,13 @@ export default function HomePage({ searchParams }: { searchParams?: DashboardSea
                 const item = NAV_ITEMS.find((navItem) => navItem.key === key);
                 if (!item) return null;
                 const NavIcon = item.icon;
+                const itemHref = item.key === 'machines'
+                  ? `/machines?env=${selectedEnv}`
+                  : `/?env=${selectedEnv}&view=${item.key}&basePath=${selectedBasePath}`;
                 return (
                   <a
                     key={item.key}
-                    href={`/?env=${selectedEnv}&view=${item.key}&basePath=${selectedBasePath}`}
+                    href={itemHref}
                     className={`side-link ${activeView === item.key ? 'active' : ''}`}
                   >
                     <span className="side-icon"><NavIcon /></span>
