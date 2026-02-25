@@ -1,4 +1,5 @@
 import db from '@/lib/db';
+import { loadInventorySummary } from '@/lib/inventory';
 
 type RunRow = {
   id: number;
@@ -18,30 +19,23 @@ type ScheduleRow = {
   id: number;
   name: string;
   env: string;
-  base_path: string;
-  dry_run: number;
-  max_workers: number;
-  probe_timeout: number;
   day_of_week: string;
   time_hhmm: string;
   enabled: number;
 };
 
+const ENV_OPTIONS = ['prod', 'qa', 'dev'] as const;
+const DEFAULT_BASE_PATH = 'environments';
+const NAV_ITEMS = [
+  { key: 'overview', label: 'Overview', icon: '◈' },
+  { key: 'get-started', label: 'Get started', icon: '✦' },
+  { key: 'machines', label: 'Machines', icon: '🖥' },
+  { key: 'history', label: 'History', icon: '🕘' },
+  { key: 'update-reports', label: 'Update reports', icon: '📊' },
+] as const;
+
 function pct(ok: number, total: number) {
   return total ? ((ok / total) * 100).toFixed(1) : '0.0';
-}
-
-function weekdayLabel(day: string) {
-  const map: Record<string, string> = {
-    mon: 'Måndag',
-    tue: 'Tisdag',
-    wed: 'Onsdag',
-    thu: 'Torsdag',
-    fri: 'Fredag',
-    sat: 'Lördag',
-    sun: 'Söndag',
-  };
-  return map[day] ?? day;
 }
 
 function statusLabel(status: string) {
@@ -50,16 +44,38 @@ function statusLabel(status: string) {
     failed: 'Failed',
     running: 'Running',
     queued: 'Pending',
+    OK: 'Completed',
+    FAILED: 'Failed',
   };
   return map[status] ?? status;
 }
 
-export default function HomePage() {
-  const runs = db.prepare('SELECT * FROM runs ORDER BY id DESC LIMIT 50').all() as RunRow[];
-  const schedules = db.prepare('SELECT * FROM schedules ORDER BY id DESC').all() as ScheduleRow[];
-  const latestRun = runs[0];
+function weekdayLabel(day: string) {
+  const map: Record<string, string> = { mon: 'Måndag', tue: 'Tisdag', wed: 'Onsdag', thu: 'Torsdag', fri: 'Fredag', sat: 'Lördag', sun: 'Söndag' };
+  return map[day] ?? day;
+}
 
-  const totals = runs.reduce(
+function machineStatusText(status: string) {
+  if (status.toLowerCase().includes('fail')) return 'Unsupported';
+  if (status.toLowerCase().includes('running') || status.toLowerCase().includes('pending')) return 'Pending updates';
+  return 'No pending updates';
+}
+
+export default function HomePage({ searchParams }: { searchParams?: { env?: string; view?: string; basePath?: string } }) {
+  const selectedEnv = ENV_OPTIONS.includes(searchParams?.env as (typeof ENV_OPTIONS)[number])
+    ? (searchParams?.env as (typeof ENV_OPTIONS)[number])
+    : 'prod';
+  const selectedBasePath = searchParams?.basePath || DEFAULT_BASE_PATH;
+  const activeView = NAV_ITEMS.some((item) => item.key === searchParams?.view) ? searchParams?.view || 'overview' : 'overview';
+
+  const runs = db.prepare('SELECT * FROM runs ORDER BY id DESC LIMIT 50').all() as RunRow[];
+  const schedules = db.prepare('SELECT id,name,env,day_of_week,time_hhmm,enabled FROM schedules ORDER BY id DESC').all() as ScheduleRow[];
+  const latestRun = runs[0];
+  const envRuns = runs.filter((run) => run.env === selectedEnv);
+  const latestEnvRun = envRuns[0];
+  const inventory = loadInventorySummary(selectedEnv, selectedBasePath);
+
+  const totals = envRuns.reduce(
     (acc, run) => {
       acc.ok += run.ok_count;
       acc.failed += run.failed_count;
@@ -70,262 +86,225 @@ export default function HomePage() {
     { ok: 0, failed: 0, skipped: 0, targets: 0 }
   );
 
-  const completedRuns = runs.filter((run) => run.status === 'completed').length;
-  const failedRuns = runs.filter((run) => run.status === 'failed').length;
-  const pendingRuns = runs.filter((run) => run.status === 'queued' || run.status === 'running').length;
-  const activeSchedules = schedules.filter((schedule) => Boolean(schedule.enabled)).length;
+  const pendingRuns = envRuns.filter((run) => run.status === 'queued' || run.status === 'running').length;
+  const completedRuns = envRuns.filter((run) => run.status === 'completed' || run.status === 'OK').length;
+  const failedRuns = envRuns.filter((run) => run.status === 'failed' || run.status === 'FAILED').length;
+  const envSchedules = schedules.filter((schedule) => schedule.env === selectedEnv);
 
-  const envCounts = runs.reduce<Record<string, number>>((acc, run) => {
-    acc[run.env] = (acc[run.env] ?? 0) + 1;
-    return acc;
-  }, {});
-
-  const clusterRows = Object.entries(envCounts).map(([env, count]) => ({
-    cluster: `cluster-${env}`,
-    env,
-    nodes: count * 3,
-    lastStatus: runs.find((run) => run.env === env)?.status ?? 'unknown',
-  }));
-
-  const serverRows = runs.slice(0, 12).map((run, idx) => ({
-    hostname: `${run.env}-node-${String(idx + 1).padStart(2, '0')}`,
-    cluster: `cluster-${run.env}`,
-    env: run.env,
-    patchStatus: statusLabel(run.status),
-    success: `${run.success_pct}%`,
+  const machineRows = inventory.servers.map((server, idx) => ({
+    name: server.hostname,
+    updateStatus: machineStatusText(statusLabel(latestEnvRun?.status ?? 'pending')),
+    operatingSystem: idx % 3 === 0 ? 'Windows' : 'Linux',
+    resourceType: server.cluster === 'standalone' ? 'Arc-enabled server' : 'Azure virtual machine',
+    patchOrchestration: server.cluster === 'standalone' ? 'N/A' : 'Azure Managed - Safe Deployment',
+    periodicAssessment: idx % 2 === 0 ? 'Yes' : 'No',
+    associatedSchedules: envSchedules[0]?.name ?? '-',
+    powerState: idx % 4 === 0 ? 'VM running' : 'VM deallocated',
   }));
 
   const csvHeader = 'id,started_at,env,status,ok_count,failed_count,skipped_count,total_targets,success_pct';
   const csvRows = runs.map((run) => [run.id, run.started_at, run.env, run.status, run.ok_count, run.failed_count, run.skipped_count, run.total_targets, run.success_pct].join(','));
   const csvHref = `data:text/csv;charset=utf-8,${encodeURIComponent([csvHeader, ...csvRows].join('\n'))}`;
 
-  const foremanHeader = 'machine,cluster,environment,patch_run_id,patched_at,cve_ids,report_json';
-  const foremanRows = runs.slice(0, 20).map((run, idx) => {
-    const machine = `${run.env}-node-${String((idx % 12) + 1).padStart(2, '0')}`;
-    return [
-      machine,
-      `cluster-${run.env}`,
-      run.env,
-      run.id,
-      run.started_at,
-      'CVE_FROM_REPORT_JSON',
-      run.report_json ?? '',
-    ].join(',');
-  });
-  const foremanCsvHref = `data:text/csv;charset=utf-8,${encodeURIComponent([foremanHeader, ...foremanRows].join('\n'))}`;
-
   const successShare = totals.targets ? (totals.ok / totals.targets) * 100 : 0;
   const failedShare = totals.targets ? (totals.failed / totals.targets) * 100 : 0;
-  const donutStyle = {
-    background: `conic-gradient(#2563eb 0 ${successShare}%, #dc2626 ${successShare}% ${successShare + failedShare}%, #f59e0b ${successShare + failedShare}% 100%)`,
-  };
+  const donutStyle = { background: `conic-gradient(#2563eb 0 ${successShare}%, #dc2626 ${successShare}% ${successShare + failedShare}%, #d6d3d1 ${successShare + failedShare}% 100%)` };
 
   return (
     <main className="azure-shell">
-      <section className="command-bar">
-        <div className="command-left">
-          <button className="ghost-btn" type="button">← Leave new experience</button>
-          <button className="ghost-btn" type="button">↻ Refresh</button>
-          <button className="ghost-btn" type="button">⚙ Update settings</button>
-        </div>
-        <div className="command-right">
-          <a className="ghost-btn" href={csvHref} download="autopatch-runs.csv">Export run history</a>
-          <a className="ghost-btn" href={foremanCsvHref} download="foreman-cve-template.csv">Export Foreman CVE template</a>
-          {latestRun?.report_xlsx && <a className="ghost-btn" href={`/${latestRun.report_xlsx}`}>Export Excel</a>}
-        </div>
-      </section>
+      <header className="top-header">
+        <div className="brand">Microsoft Azure</div>
+        <input className="header-search" placeholder="Search resources, services and docs" />
+        <div className="header-user">Connie Wilson · CONTOSO</div>
+      </header>
 
-      <section className="tabs-row">
-        <span className="tab active">Recommended updates</span>
-        <span className="tab">Update history</span>
-        <span className="tab">Scheduling</span>
-      </section>
+      <div className="shell-layout">
+        <aside className="side-nav">
+          <input className="side-search" placeholder="Search" />
+          <p className="side-title">Navigation</p>
+          {NAV_ITEMS.map((item) => (
+            <a
+              key={item.key}
+              href={`/?env=${selectedEnv}&view=${item.key}&basePath=${selectedBasePath}`}
+              className={`side-link ${activeView === item.key ? 'active' : ''}`}
+            >
+              <span className="side-icon">{item.icon}</span>
+              <span>{item.label}</span>
+            </a>
+          ))}
 
-      <section className="content-area space-y-5">
-        <div>
-          <h1 className="text-2xl font-semibold">Infrastructure (host) updates</h1>
-          <p className="mt-1 text-sm text-slate-500">Nu med serverlista, klusteröversikt, miljöval (t.ex. prod) och scheduler-kontroller.</p>
-        </div>
+          <p className="side-title mt-6">Environments</p>
+          {ENV_OPTIONS.map((env) => (
+            <a key={env} href={`/?env=${env}&view=${activeView}&basePath=${selectedBasePath}`} className={`side-link ${selectedEnv === env ? 'active' : ''}`}>
+              <span className="side-icon">⬢</span>
+              <span>{env.toUpperCase()}</span>
+            </a>
+          ))}
+        </aside>
 
-        <div className="kpi-grid">
-          <article className="kpi-card"><p className="kpi-title">Total updates</p><p className="kpi-value">{totals.targets}</p></article>
-          <article className="kpi-card"><p className="kpi-title">Critical updates</p><p className="kpi-value text-amber-600">{totals.failed}</p></article>
-          <article className="kpi-card"><p className="kpi-title">Security updates</p><p className="kpi-value text-blue-700">{totals.ok}</p></article>
-          <article className="kpi-card"><p className="kpi-title">Pending updates</p><p className="kpi-value">{pendingRuns}</p></article>
-          <article className="kpi-card"><p className="kpi-title">Active schedules</p><p className="kpi-value">{activeSchedules}</p></article>
-        </div>
-
-        <div className="panel-grid">
-          <article className="panel-card">
-            <div className="panel-head">
-              <h2>Update status of machines</h2>
-              <span className="chip">Last 50 runs</span>
+        <section className="main-pane">
+          <section className="command-bar">
+            <div className="command-left">
+              <button className="ghost-btn" type="button">↻ Refresh</button>
+              <button className="ghost-btn" type="button">Check for updates</button>
+              <button className="ghost-btn" type="button">One-time update</button>
             </div>
-            <div className="status-layout">
-              <div className="donut-wrap">
-                <div className="donut" style={donutStyle}>
-                  <div className="donut-inner">
-                    <strong>{runs.length}</strong>
-                    <span>Runs</span>
-                  </div>
+            <div className="command-right">
+              <a className="ghost-btn" href={csvHref} download="autopatch-runs.csv">Export to CSV</a>
+              {latestRun?.report_xlsx && <a className="ghost-btn" href={`/${latestRun.report_xlsx}`}>Export Excel</a>}
+            </div>
+          </section>
+
+          <section className="tabs-row">
+            <span className="tab active">Azure Update Manager</span>
+            <span className="tab">Environment: {selectedEnv.toUpperCase()}</span>
+            <span className="tab">Inventory: {inventory.inventory_path}</span>
+            <span className="tab">Source: {inventory.source ?? 'ansible'}</span>
+          </section>
+
+          <section className="content-area space-y-5">
+            <div>
+              <h1 className="text-3xl font-semibold">Azure Update Manager</h1>
+              <p className="mt-1 text-sm text-slate-500">Läser från {selectedBasePath}/{selectedEnv}/inventory via Python-integration.</p>
+              {inventory.error && <p className="mt-2 text-sm text-rose-700">Inventory-fel: {inventory.error}</p>}
+              {inventory.source === 'fixture' && <p className="mt-2 text-sm text-amber-700">Visar fejkdata från JSON-fixtures för snabb UI-test.</p>}
+            </div>
+
+            {activeView === 'overview' && (
+              <>
+                <div className="kpi-grid">
+                  <article className="kpi-card"><p className="kpi-title">Total machines</p><p className="kpi-value">{inventory.server_count}</p></article>
+                  <article className="kpi-card"><p className="kpi-title">No updates data</p><p className="kpi-value">{Math.max(inventory.server_count - totals.targets, 0)}</p></article>
+                  <article className="kpi-card"><p className="kpi-title">No pending updates</p><p className="kpi-value text-emerald-700">{totals.ok}</p></article>
+                  <article className="kpi-card"><p className="kpi-title">Pending updates</p><p className="kpi-value text-amber-700">{pendingRuns}</p></article>
+                  <article className="kpi-card"><p className="kpi-title">Unsupported</p><p className="kpi-value text-rose-700">{failedRuns}</p></article>
                 </div>
-              </div>
-              <div className="stat-list">
-                <p><span>Pending updates</span><strong>{pendingRuns}</strong></p>
-                <p><span>No pending updates</span><strong>{completedRuns}</strong></p>
-                <p><span>Failed</span><strong>{failedRuns}</strong></p>
-                <p><span>Compliance rate</span><strong>{pct(totals.ok, totals.targets)}%</strong></p>
-              </div>
-            </div>
-          </article>
 
-          <article className="panel-card space-y-4">
-            <div className="panel-head">
-              <h2>Patch scheduling controls</h2>
-              <span className="chip">Prod / QA / Dev</span>
-            </div>
-            <form action="/api/runs/manual" method="post" className="form-grid">
-              <select className="input" name="env" defaultValue="prod">
-                <option value="prod">prod</option>
-                <option value="qa">qa</option>
-                <option value="dev">dev</option>
-              </select>
-              <input className="input" name="basePath" defaultValue="../../../Ansible/environments" />
-              <input className="input" name="maxWorkers" type="number" defaultValue="4" />
-              <input className="input" name="probeTimeout" type="number" step="0.5" defaultValue="5" />
-              <label className="text-sm"><input type="checkbox" name="dryRun" value="1" className="mr-2" />Dry run</label>
-              <button className="primary-btn" type="submit">Start patch run</button>
-            </form>
+                <section className="panel-grid">
+                  <article className="panel-card">
+                    <div className="panel-head"><h2>Update status of machines</h2></div>
+                    <div className="status-layout">
+                      <div className="donut-wrap"><div className="donut" style={donutStyle}><div className="donut-inner"><strong>{inventory.server_count}</strong><span>Machines</span></div></div></div>
+                      <div className="stat-list">
+                        <p><span>Pending updates</span><strong>{pendingRuns}</strong></p>
+                        <p><span>No pending updates</span><strong>{completedRuns}</strong></p>
+                        <p><span>Unsupported</span><strong>{failedRuns}</strong></p>
+                        <p><span>Compliance rate</span><strong>{pct(totals.ok, totals.targets)}%</strong></p>
+                      </div>
+                    </div>
+                  </article>
 
-            <form action="/api/schedules" method="post" className="form-grid">
-              <input className="input" name="name" placeholder="Scheduler name" required />
-              <select className="input" name="env" defaultValue="prod">
-                <option value="prod">prod</option>
-                <option value="qa">qa</option>
-                <option value="dev">dev</option>
-              </select>
-              <select className="input" name="dayOfWeek" defaultValue="sun">
-                <option value="mon">Måndag</option><option value="tue">Tisdag</option><option value="wed">Onsdag</option>
-                <option value="thu">Torsdag</option><option value="fri">Fredag</option><option value="sat">Lördag</option><option value="sun">Söndag</option>
-              </select>
-              <input className="input" name="timeHHMM" type="time" defaultValue="02:00" />
-              <input className="input" name="basePath" defaultValue="../../../Ansible/environments" />
-              <input className="input" name="maxWorkers" type="number" defaultValue="4" />
-              <input className="input" name="probeTimeout" type="number" step="0.5" defaultValue="5" />
-              <label className="text-sm"><input type="checkbox" name="dryRun" value="1" className="mr-2" />Dry run</label>
-              <button className="primary-btn" type="submit">Save scheduler</button>
-            </form>
-          </article>
-        </div>
+                  <article className="panel-card">
+                    <div className="panel-head"><h2>Patch installation status</h2><span className="chip">Last 30 days</span></div>
+                    <div className="stat-list">
+                      <p><span>Total installation runs</span><strong>{envRuns.length}</strong></p>
+                      <p><span>Completed</span><strong>{completedRuns}</strong></p>
+                      <p><span>Failed</span><strong>{failedRuns}</strong></p>
+                      <p><span>In progress</span><strong>{pendingRuns}</strong></p>
+                    </div>
+                  </article>
+                </section>
+              </>
+            )}
 
-        <section className="panel-grid">
-          <article className="table-card">
-            <div className="table-head">
-              <h2>Server list</h2>
-              <div className="chips">
-                <span className="chip">Environment: All</span>
-                <span className="chip">Cluster: All</span>
-              </div>
-            </div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr><th>Server</th><th>Cluster</th><th>Env</th><th>Patch status</th><th>Success</th></tr>
-                </thead>
-                <tbody>
-                  {serverRows.map((row) => (
-                    <tr key={row.hostname}><td>{row.hostname}</td><td>{row.cluster}</td><td>{row.env}</td><td>{row.patchStatus}</td><td>{row.success}</td></tr>
+            {activeView === 'get-started' && (
+              <section className="table-card p-6 space-y-3">
+                <h2 className="text-lg font-semibold">Get started</h2>
+                <p className="text-sm text-slate-600">1) Välj miljö i vänstermenyn. 2) Kontrollera inventory-sökväg. 3) Starta patch-run eller skapa schema.</p>
+                <p className="text-sm text-slate-600">När du klickar Machines visas en komplett maskinlista med patch-status, OS, resurstyp och associerade scheman.</p>
+              </section>
+            )}
+
+            {activeView === 'machines' && (
+              <>
+                <section className="info-banner">
+                  <div>
+                    <p className="font-semibold text-slate-800">Install updates now for {inventory.server_count} selected machine(s)</p>
+                    <p className="text-xs text-slate-600">There may be newer updates available to choose from. We strongly recommend you assess now prior to installing updates.</p>
+                  </div>
+                  <div className="flex gap-2"><button className="primary-btn" type="button">Install now</button><button className="ghost-btn" type="button">Cancel</button></div>
+                </section>
+
+                <div className="kpi-grid kpi-grid-machines">
+                  <article className="kpi-card"><p className="kpi-title">Total machines</p><p className="kpi-value">{inventory.server_count}</p></article>
+                  <article className="kpi-card"><p className="kpi-title">No updates data</p><p className="kpi-value">{Math.max(inventory.server_count - totals.targets, 0)}</p></article>
+                  <article className="kpi-card"><p className="kpi-title">No pending updates</p><p className="kpi-value text-emerald-700">{totals.ok}</p></article>
+                  <article className="kpi-card"><p className="kpi-title">Pending updates</p><p className="kpi-value text-amber-700">{pendingRuns}</p></article>
+                  <article className="kpi-card"><p className="kpi-title">Pending reboot</p><p className="kpi-value text-amber-700">{totals.skipped}</p></article>
+                  <article className="kpi-card"><p className="kpi-title">Unsupported</p><p className="kpi-value text-rose-700">{failedRuns}</p></article>
+                </div>
+
+                <section className="table-card">
+                  <div className="table-head"><h2>Machines</h2><span className="chip">Showing {machineRows.length} rows</span></div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr>
+                          <th>Name</th><th>Update status</th><th>Operating system</th><th>Resource type</th><th>Patch orchestration</th><th>Periodic assessment</th><th>Associated schedules</th><th>Status</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {machineRows.map((row) => (
+                          <tr key={row.name}>
+                            <td>{row.name}</td><td>{row.updateStatus}</td><td>{row.operatingSystem}</td><td>{row.resourceType}</td><td>{row.patchOrchestration}</td><td>{row.periodicAssessment}</td><td>{row.associatedSchedules}</td><td>{row.powerState}</td>
+                          </tr>
+                        ))}
+                        {machineRows.length === 0 && <tr><td colSpan={8} className="text-slate-500">No machines found in inventory.</td></tr>}
+                      </tbody>
+                    </table>
+                  </div>
+                </section>
+              </>
+            )}
+
+            {activeView === 'history' && (
+              <section className="table-card">
+                <div className="table-head"><h2>Update run history</h2></div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead><tr><th>ID</th><th>Start</th><th>Env</th><th>Status</th><th>Success</th><th>Reports</th></tr></thead>
+                    <tbody>
+                      {envRuns.map((run) => (
+                        <tr key={run.id}>
+                          <td>#{run.id}</td><td>{run.started_at}</td><td>{run.env}</td><td>{statusLabel(run.status)}</td><td>{run.success_pct}%</td>
+                          <td className="space-x-2">{run.report_json && <a className="link" href={`/${run.report_json}`}>JSON</a>}{run.report_xlsx && <a className="link" href={`/${run.report_xlsx}`}>XLSX</a>}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+            )}
+
+            {activeView === 'update-reports' && (
+              <section className="panel-grid">
+                <article className="table-card">
+                  <div className="table-head"><h2>Cluster summary</h2></div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead><tr><th>Cluster</th><th>Nodes</th><th>Env</th></tr></thead>
+                      <tbody>
+                        {inventory.clusters.map((cluster) => (
+                          <tr key={cluster.name}><td>{cluster.name}</td><td>{cluster.nodes}</td><td>{selectedEnv}</td></tr>
+                        ))}
+                        {inventory.clusters.length === 0 && <tr><td colSpan={3} className="text-slate-500">No cluster groups found (*_cluster).</td></tr>}
+                      </tbody>
+                    </table>
+                  </div>
+                </article>
+
+                <article className="table-card p-4 space-y-2">
+                  <h2 className="text-sm font-semibold">Schedules in {selectedEnv.toUpperCase()}</h2>
+                  {envSchedules.map((s) => (
+                    <p className="text-sm" key={s.id}>{s.name} · {weekdayLabel(s.day_of_week)} {s.time_hhmm} · {s.enabled ? 'Enabled' : 'Disabled'}</p>
                   ))}
-                </tbody>
-              </table>
-            </div>
-          </article>
-
-          <article className="table-card">
-            <div className="table-head">
-              <h2>Clusters</h2>
-              <span className="chip">Derived from run activity</span>
-            </div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr><th>Cluster</th><th>Environment</th><th>Nodes</th><th>Last status</th></tr>
-                </thead>
-                <tbody>
-                  {clusterRows.map((row) => (
-                    <tr key={row.cluster}><td>{row.cluster}</td><td>{row.env}</td><td>{row.nodes}</td><td>{statusLabel(row.lastStatus)}</td></tr>
-                  ))}
-                  {clusterRows.length === 0 && <tr><td colSpan={4} className="text-slate-500">No cluster data yet.</td></tr>}
-                </tbody>
-              </table>
-            </div>
-          </article>
+                  {envSchedules.length === 0 && <p className="text-sm text-slate-500">No schedules configured yet.</p>}
+                </article>
+              </section>
+            )}
+          </section>
         </section>
-
-        <section className="table-card">
-          <div className="table-head">
-            <h2>Schedules</h2>
-            <span className="chip">Enable / disable</span>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr><th>Name</th><th>Env</th><th>When</th><th>Status</th><th>Action</th></tr>
-              </thead>
-              <tbody>
-                {schedules.map((s) => (
-                  <tr key={s.id}>
-                    <td>{s.name}</td>
-                    <td>{s.env}</td>
-                    <td>{weekdayLabel(s.day_of_week)} {s.time_hhmm}</td>
-                    <td><span className={`pill ${s.enabled ? 'pill-on' : 'pill-off'}`}>{s.enabled ? 'Enabled' : 'Disabled'}</span></td>
-                    <td>
-                      <form action={`/api/schedules/${s.id}/toggle`} method="post">
-                        <button className="ghost-btn" type="submit">{s.enabled ? 'Pause' : 'Enable'}</button>
-                      </form>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </section>
-
-        <section className="table-card">
-          <div className="table-head">
-            <h2>Update runs</h2>
-            <div className="chips">
-              <span className="chip">Environment: All</span>
-              <span className="chip">Status: All</span>
-              <span className="chip">Reboot required: All</span>
-            </div>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr>
-                  <th>ID</th><th>Start</th><th>Environment</th><th>Status</th><th>Success</th><th>Reports</th>
-                </tr>
-              </thead>
-              <tbody>
-                {runs.map((run) => (
-                  <tr key={run.id}>
-                    <td>#{run.id}</td>
-                    <td>{run.started_at}</td>
-                    <td>{run.env}</td>
-                    <td>{statusLabel(run.status)}</td>
-                    <td>{run.success_pct}%</td>
-                    <td className="space-x-2">
-                      {run.report_json && <a className="link" href={`/${run.report_json}`}>JSON</a>}
-                      {run.report_xlsx && <a className="link" href={`/${run.report_xlsx}`}>XLSX</a>}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </section>
-      </section>
+      </div>
     </main>
   );
 }
