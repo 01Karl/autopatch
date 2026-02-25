@@ -5,7 +5,7 @@ export async function POST(req: Request) {
   const form = await req.formData();
   enqueueAutopatch({
     env: String(form.get('env') || 'qa'),
-    basePath: String(form.get('basePath') || '../../../Ansible/environments'),
+    basePath: String(form.get('basePath') || 'environments'),
     dryRun: form.get('dryRun') === '1',
     maxWorkers: Number(form.get('maxWorkers') || 2),
     probeTimeout: Number(form.get('probeTimeout') || 5)
