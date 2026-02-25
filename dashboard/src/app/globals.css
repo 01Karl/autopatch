@@ -2,6 +2,13 @@
 @tailwind components;
 @tailwind utilities;
 
+body {@apply bg-slate-50 text-slate-900;}
 .card {@apply rounded-xl bg-white p-4 shadow-sm border border-slate-200;}
-.input {@apply rounded-md border border-slate-300 px-3 py-2 text-sm;}
-.btn {@apply rounded-md bg-blue-600 px-4 py-2 text-white text-sm hover:bg-blue-700;}
+.hero-card {@apply rounded-2xl border border-blue-200 bg-gradient-to-r from-white to-blue-50 p-6 shadow-sm flex flex-col gap-4 md:flex-row md:items-center md:justify-between;}
+.stat-card {@apply flex flex-col justify-between min-h-[102px];}
+.stat-label {@apply text-sm text-slate-500;}
+.stat-value {@apply text-2xl font-semibold;}
+.stat-sub {@apply mt-1 text-xs text-slate-500;}
+.input {@apply rounded-md border border-slate-300 px-3 py-2 text-sm bg-white;}
+.btn {@apply inline-flex items-center justify-center rounded-md bg-blue-600 px-4 py-2 text-white text-sm hover:bg-blue-700 transition-colors;}
+.btn-secondary {@apply bg-white text-blue-700 border border-blue-300 hover:bg-blue-50;}
