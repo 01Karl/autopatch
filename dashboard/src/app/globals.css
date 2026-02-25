@@ -23,6 +23,11 @@ body {@apply bg-[#f3f2f1] text-slate-900;}
 .side-section {@apply mb-3 border-b border-slate-200 pb-3 last:mb-0 last:border-b-0 last:pb-0;}
 .side-link {@apply mb-1 flex items-center gap-2 rounded-md px-2 py-1.5 text-sm text-slate-700 hover:bg-slate-200/70;}
 .side-link.active {@apply bg-red-100 font-medium text-red-800;}
+
+.side-group {@apply mb-1;}
+.side-submenu {@apply ml-6 mt-1 grid gap-1;}
+.side-sublink {@apply inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs text-slate-600 hover:bg-slate-200/60;}
+.side-sublink.active {@apply bg-red-100 font-medium text-red-800;}
 .side-icon {@apply inline-flex w-5 justify-center text-sm;}
 .side-icon svg {@apply h-4 w-4;}
 .main-pane {@apply min-w-0;}

@@ -105,7 +105,7 @@ export default function MachinesPage({ searchParams }: { searchParams?: SearchPa
       </section>
 
       <div className="shell-layout">
-        <ManagerSidebarNav activeView="machines" selectedEnv={selectedEnv} selectedBasePath="environments" />
+        <ManagerSidebarNav activeView="machines-all" selectedEnv={selectedEnv} selectedBasePath="environments" />
 
         <section className="main-pane">
           <p className="pane-context-text">{pageWorkflowText}</p>
