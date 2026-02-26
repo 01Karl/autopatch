@@ -1,5 +1,5 @@
 import { Client } from 'ldapts';
-import { authConfig } from '@/lib/config/auth';
+import { getFreeIpaConfig } from '@/lib/config/auth';
 
 type LdapAuthResult =
   | { ok: true; user: { username: string; displayName: string; groups: string[] } }
@@ -14,14 +14,14 @@ function escapeLDAPValue(input: string): string {
     .replace(/\0/g, '\\00');
 }
 
-function buildUserFilter(username: string): string {
+function buildUserFilter(username: string, userSearchFilter: string): string {
   const safeUsername = escapeLDAPValue(username);
-  return authConfig.freeipa.userSearchFilter.replace('{{username}}', safeUsername);
+  return userSearchFilter.replace('{{username}}', safeUsername);
 }
 
-function getLdapUrl() {
-  const scheme = authConfig.freeipa.useTls ? 'ldaps' : 'ldap';
-  return `${scheme}://${authConfig.freeipa.host}:${authConfig.freeipa.port}`;
+function getLdapUrl(host: string, port: number, useTls: boolean) {
+  const scheme = useTls ? 'ldaps' : 'ldap';
+  return `${scheme}://${host}:${port}`;
 }
 
 function normalizeDisplayName(
@@ -52,19 +52,21 @@ export async function authenticateWithLdap(username: string, password: string): 
     return { ok: false, error: 'INVALID_CREDENTIALS' };
   }
 
+  const freeIpaConfig = getFreeIpaConfig();
+
   const client = new Client({
-    url: getLdapUrl(),
-    timeout: authConfig.freeipa.timeoutMs,
-    connectTimeout: authConfig.freeipa.timeoutMs,
-    tlsOptions: authConfig.freeipa.useTls ? { rejectUnauthorized: true } : undefined,
+    url: getLdapUrl(freeIpaConfig.host, freeIpaConfig.port, freeIpaConfig.useTls),
+    timeout: freeIpaConfig.timeoutMs,
+    connectTimeout: freeIpaConfig.timeoutMs,
+    tlsOptions: freeIpaConfig.useTls ? { rejectUnauthorized: true } : undefined,
   });
 
   try {
-    await client.bind(authConfig.freeipa.bindDn, authConfig.freeipa.bindPassword);
+    await client.bind(freeIpaConfig.bindDn, freeIpaConfig.bindPassword);
 
-    const { searchEntries } = await client.search(authConfig.freeipa.userSearchBase || authConfig.freeipa.baseDn, {
+    const { searchEntries } = await client.search(freeIpaConfig.userSearchBase || freeIpaConfig.baseDn, {
       scope: 'sub',
-      filter: buildUserFilter(trimmedUsername),
+      filter: buildUserFilter(trimmedUsername, freeIpaConfig.userSearchFilter),
       sizeLimit: 2,
       attributes: ['dn', 'cn', 'displayName', 'memberOf'],
     });
