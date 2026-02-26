@@ -6,6 +6,8 @@ import { cookies } from 'next/headers';
 import { mergeInventories } from '@/lib/inventory';
 import { FiMonitor, FiServer } from 'react-icons/fi';
 import ManagerSidebarNav from '@/app/_components/layout/ManagerSidebarNav';
+import AppHeader from '@/app/_components/layout/AppHeader';
+import AppFooter from '@/app/_components/layout/AppFooter';
 import { AppButton, AppButtonLink } from '@/app/_components/ui/AppButton';
 import LinkTabs from '@/app/_components/ui/LinkTabs';
 import { buildPatchRoutineYaml } from '@/app/_lib/playbook-routine';
@@ -219,16 +221,18 @@ export default function HomePage({ searchParams }: { searchParams?: DashboardSea
 
   return (
     <main className="azure-shell">
-      <header className="top-header">
-        <div className="brand">Overseer Repository Management</div>
-        <input className="header-search" placeholder="Search resources, services and docs" />
-        <div className="header-user">
-          <span>{session?.username || 'Okänd användare'}</span>
-          <form action="/api/auth/logout" method="post" className="inline">
-            <AppButton className="ml-3" type="submit">Logga ut</AppButton>
-          </form>
-        </div>
-      </header>
+      <AppHeader
+        brand="Overseer Repository Management"
+        title="Overseer Repository Management"
+        rightContent={(
+          <>
+            <span>{session?.username || 'Okänd användare'}</span>
+            <form action="/api/auth/logout" method="post" className="inline">
+              <AppButton className="ml-3" type="submit">Logga ut</AppButton>
+            </form>
+          </>
+        )}
+      />
 
       <section className="shell-page-intro">
         <div className="shell-page-breadcrumbs">
@@ -682,6 +686,7 @@ export default function HomePage({ searchParams }: { searchParams?: DashboardSea
           </section>
         </section>
       </div>
+      <AppFooter />
     </main>
   );
 }
