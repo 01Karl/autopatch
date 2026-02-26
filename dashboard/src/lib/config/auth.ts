@@ -1,19 +1,21 @@
-const ENV = {
-  FREEIPA_HOST: process.env.FREEIPA_HOST,
-  FREEIPA_PORT: process.env.FREEIPA_PORT,
-  FREEIPA_BASE_DN: process.env.FREEIPA_BASE_DN,
-  FREEIPA_BIND_DN: process.env.FREEIPA_BIND_DN,
-  FREEIPA_BIND_PASSWORD: process.env.FREEIPA_BIND_PASSWORD,
-  FREEIPA_USER_SEARCH_BASE: process.env.FREEIPA_USER_SEARCH_BASE,
-  FREEIPA_USER_SEARCH_FILTER: process.env.FREEIPA_USER_SEARCH_FILTER,
-  FREEIPA_USE_TLS: process.env.FREEIPA_USE_TLS,
-  AUTOPATCH_SESSION_SECRET: process.env.AUTOPATCH_SESSION_SECRET,
-};
+const REQUIRED_ENV_KEYS = [
+  'FREEIPA_HOST',
+  'FREEIPA_PORT',
+  'FREEIPA_BASE_DN',
+  'FREEIPA_BIND_DN',
+  'FREEIPA_BIND_PASSWORD',
+  'FREEIPA_USER_SEARCH_BASE',
+  'FREEIPA_USER_SEARCH_FILTER',
+  'FREEIPA_USE_TLS',
+  'AUTOPATCH_SESSION_SECRET',
+] as const;
 
-function requireEnv(name: keyof typeof ENV): string {
-  const value = ENV[name]?.trim();
+function requireEnv(name: (typeof REQUIRED_ENV_KEYS)[number]): string {
+  const value = process.env[name]?.trim();
   if (!value) {
-    throw new Error(`Missing required environment variable: ${name}`);
+    throw new Error(
+      `Missing required environment variable: ${name}. Add it in dashboard/.env.local (or your deployed runtime environment), then restart the Next.js server.`,
+    );
   }
   return value;
 }
