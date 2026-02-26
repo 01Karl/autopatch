@@ -75,8 +75,8 @@ const NAV_SECTIONS: NavSection[] = [
   {
     title: 'Manager',
     items: [
-      { key: 'overview', label: 'Overview', icon: FiHome, href: (env, basePath) => `/?env=${env}&view=overview&basePath=${basePath}` },
-      { key: 'get-started', label: 'Get started', icon: FiPlayCircle, href: (env, basePath) => `/?env=${env}&view=get-started&basePath=${basePath}` },
+      { key: 'overview', label: 'Overview', icon: FiHome, href: (env, basePath) => `/repository?env=${env}&view=overview&basePath=${basePath}` },
+      { key: 'get-started', label: 'Get started', icon: FiPlayCircle, href: (env, basePath) => `/repository?env=${env}&view=get-started&basePath=${basePath}` },
     ],
   },
   {
