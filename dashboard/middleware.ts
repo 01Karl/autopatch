@@ -1,22 +1,16 @@
-import { decodeSession, getSessionCookieName } from '@/lib/auth';
+import { readSessionToken, getSessionCookieName } from '@/lib/auth/session';
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
 
-const PUBLIC_PATHS = ['/login', '/api/auth/login'];
+const PROTECTED_PREFIXES = ['/machines', '/repository', '/compliance'];
 
 export function middleware(req: NextRequest) {
   const { pathname, search } = req.nextUrl;
 
-  if (
-    PUBLIC_PATHS.some((path) => pathname === path) ||
-    pathname.startsWith('/_next') ||
-    pathname.startsWith('/favicon')
-  ) {
-    return NextResponse.next();
-  }
-
   const token = req.cookies.get(getSessionCookieName())?.value;
-  if (decodeSession(token)) {
+  const session = readSessionToken(token);
+
+  if (session) {
     return NextResponse.next();
   }
 
@@ -26,5 +20,5 @@ export function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'],
+  matcher: PROTECTED_PREFIXES.map((prefix) => `${prefix}/:path*`),
 };

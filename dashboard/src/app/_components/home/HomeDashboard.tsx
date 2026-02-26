@@ -1,9 +1,7 @@
 import db from '@/lib/db';
-import { decodeSession, getSessionCookieName } from '@/lib/auth';
-import { getFreeIPAConfigPath, getPlaybookRoutines } from '@/lib/config';
-import { getFreeIPAConfig } from '@/lib/freeipa';
-import { cookies } from 'next/headers';
+import { getPlaybookRoutines } from '@/lib/config';
 import { mergeInventories } from '@/lib/inventory';
+import { getServerSession } from '@/lib/auth/server-session';
 import { FiMonitor, FiServer } from 'react-icons/fi';
 import ManagerSidebarNav from '@/app/_components/layout/ManagerSidebarNav';
 import AppHeader from '@/app/_components/layout/AppHeader';
@@ -130,11 +128,9 @@ export default function HomePage({ searchParams }: { searchParams?: DashboardSea
 
   const runs = db.prepare('SELECT * FROM runs ORDER BY id DESC LIMIT 50').all() as RunRow[];
   const schedules = db.prepare('SELECT id,name,env,day_of_week,time_hhmm,enabled FROM schedules ORDER BY id DESC').all() as ScheduleRow[];
-  const freeipaConfig = getFreeIPAConfig();
   const playbookRoutines = getPlaybookRoutines();
   const serviceAccounts = db.prepare('SELECT id, name, purpose, username, created_at FROM service_accounts ORDER BY id DESC').all() as ServiceAccountRow[];
-  const sessionToken = cookies().get(getSessionCookieName())?.value;
-  const session = decodeSession(sessionToken);
+  const session = getServerSession();
   const latestRun = runs[0];
   const envRuns = selectedEnv === 'all' ? runs : runs.filter((run) => run.env === selectedEnv);
   const latestEnvRun = envRuns[0];
@@ -430,25 +426,7 @@ export default function HomePage({ searchParams }: { searchParams?: DashboardSea
                     <h2 className="text-lg font-semibold">FreeIPA integration</h2>
                     <span className="text-xs text-slate-500">API-stöd för central inloggning och service-konton</span>
                   </div>
-                  <p className="text-xs text-slate-500">Konfiguration läses från fil: <code>{getFreeIPAConfigPath()}</code></p>
-
-                  <form action="/api/freeipa/config" method="post" className="grid gap-3 md:grid-cols-3">
-                    <label className="text-xs text-slate-500">FreeIPA base URL
-                      <input className="mt-1 w-full rounded-md border border-slate-300 px-2 py-1 text-sm" name="baseUrl" defaultValue={freeipaConfig?.base_url || ''} placeholder="https://ipa.example.com" required />
-                    </label>
-                    <label className="text-xs text-slate-500">Username suffix
-                      <input className="mt-1 w-full rounded-md border border-slate-300 px-2 py-1 text-sm" name="usernameSuffix" defaultValue={freeipaConfig?.username_suffix || ''} placeholder="@EXAMPLE.COM" />
-                    </label>
-                    <label className="text-xs text-slate-500">TLS verification
-                      <select className="mt-1 w-full rounded-md border border-slate-300 bg-white px-2 py-1 text-sm" name="verifyTls" defaultValue={String(freeipaConfig?.verify_tls ?? 1)}>
-                        <option value="1">Strict</option>
-                        <option value="0">Disabled (test only)</option>
-                      </select>
-                    </label>
-                    <div className="md:col-span-3">
-                      <AppButton variant="primary" type="submit">Spara FreeIPA inställningar</AppButton>
-                    </div>
-                  </form>
+                  <p className="text-xs text-slate-500">FreeIPA authentication is configured via environment variables only (FREEIPA_* and AUTOPATCH_SESSION_SECRET).</p>
 
                   <form action="/api/freeipa/service-accounts" method="post" className="grid gap-3 md:grid-cols-4">
                     <label className="text-xs text-slate-500">Namn
