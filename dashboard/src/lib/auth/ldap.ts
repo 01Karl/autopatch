@@ -55,7 +55,8 @@ export async function authenticateWithLdap(username: string, password: string): 
   let freeIpaConfig: ReturnType<typeof getFreeIpaConfig>;
   try {
     freeIpaConfig = getFreeIpaConfig();
-  } catch {
+  } catch (error) {
+    console.error('LDAP configuration error:', error);
     return { ok: false, error: 'AUTH_UNAVAILABLE' };
   }
 
@@ -102,6 +103,8 @@ export async function authenticateWithLdap(username: string, password: string): 
     if (name.includes('invalidcredential') || message.includes('invalid credentials') || message.includes('invalidcredential')) {
       return { ok: false, error: 'INVALID_CREDENTIALS' };
     }
+
+    console.error('LDAP authentication error:', error);
     return { ok: false, error: 'AUTH_UNAVAILABLE' };
   } finally {
     await client.unbind().catch(() => undefined);
