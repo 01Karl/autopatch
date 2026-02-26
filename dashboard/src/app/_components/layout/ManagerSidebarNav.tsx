@@ -97,10 +97,10 @@ const NAV_SECTIONS: NavSection[] = [
         label: 'Compliance',
         icon: FiShield,
         children: [
-          { key: 'compliance-policies', label: 'Policies', href: (env) => `/repository/compliance/policies?env=${env}` },
-          { key: 'compliance-scap-contents', label: 'SCAP Contents', href: (env) => `/repository/compliance/scap-contents?env=${env}` },
-          { key: 'compliance-reports', label: 'Reports', href: (env) => `/repository/compliance/reports?env=${env}` },
-          { key: 'compliance-tailoring-files', label: 'Tailoring Files', href: (env) => `/repository/compliance/tailoring-files?env=${env}` },
+          { key: 'compliance-policies', label: 'Policies', href: (env) => `/compliance/policies?env=${env}` },
+          { key: 'compliance-scap-contents', label: 'SCAP Contents', href: (env) => `/compliance/scap-contents?env=${env}` },
+          { key: 'compliance-reports', label: 'Reports', href: (env) => `/compliance/reports?env=${env}` },
+          { key: 'compliance-tailoring-files', label: 'Tailoring Files', href: (env) => `/compliance/tailoring-files?env=${env}` },
         ],
       },
       {

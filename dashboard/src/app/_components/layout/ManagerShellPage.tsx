@@ -1,5 +1,7 @@
 import type { ReactNode } from 'react';
 import ManagerSidebarNav, { ManagerNavKey } from '@/app/_components/layout/ManagerSidebarNav';
+import AppHeader from '@/app/_components/layout/AppHeader';
+import AppFooter from '@/app/_components/layout/AppFooter';
 
 type ManagerShellPageProps = {
   title: string;
@@ -24,11 +26,7 @@ export default function ManagerShellPage({
 }: ManagerShellPageProps) {
   return (
     <main className="azure-shell">
-      <header className="top-header">
-        <div className="brand">Overseer Infrastructure Manager</div>
-        <input className="header-search" placeholder="Search resources, services and docs" />
-        <div className="header-user">Overseer · {title}</div>
-      </header>
+      <AppHeader brand="Overseer Infrastructure Manager" title={title} rightContent={`Overseer · ${title}`} />
 
       <section className="shell-page-intro">
         <div className="shell-page-breadcrumbs">
@@ -51,6 +49,7 @@ export default function ManagerShellPage({
           <section className="content-area">{children}</section>
         </section>
       </div>
+      <AppFooter />
     </main>
   );
 }
