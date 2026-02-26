@@ -52,7 +52,12 @@ export async function authenticateWithLdap(username: string, password: string): 
     return { ok: false, error: 'INVALID_CREDENTIALS' };
   }
 
-  const freeIpaConfig = getFreeIpaConfig();
+  let freeIpaConfig: ReturnType<typeof getFreeIpaConfig>;
+  try {
+    freeIpaConfig = getFreeIpaConfig();
+  } catch {
+    return { ok: false, error: 'AUTH_UNAVAILABLE' };
+  }
 
   const client = new Client({
     url: getLdapUrl(freeIpaConfig.host, freeIpaConfig.port, freeIpaConfig.useTls),
