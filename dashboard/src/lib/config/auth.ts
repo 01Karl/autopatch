@@ -29,28 +29,39 @@ function parsePort(raw: string): number {
 function parseBoolean(raw: string, envName: string): boolean {
   if (raw === 'true') return true;
   if (raw === 'false') return false;
-  throw new Error(`${envName} must be either \"true\" or \"false\".`);
+  throw new Error(`${envName} must be either "true" or "false".`);
 }
 
-export type AuthConfig = {
-  freeipa: {
-    host: string;
-    port: number;
-    baseDn: string;
-    bindDn: string;
-    bindPassword: string;
-    userSearchBase: string;
-    userSearchFilter: string;
-    useTls: boolean;
-    timeoutMs: number;
-  };
-  session: {
-    secret: string;
-    maxAgeSeconds: number;
-  };
+type FreeIpaConfig = {
+  host: string;
+  port: number;
+  baseDn: string;
+  bindDn: string;
+  bindPassword: string;
+  userSearchBase: string;
+  userSearchFilter: string;
+  useTls: boolean;
+  timeoutMs: number;
 };
 
-export function getAuthConfig(): AuthConfig {
+type SessionConfig = {
+  secret: string;
+  maxAgeSeconds: number;
+};
+
+export type AuthConfig = {
+  freeipa: FreeIpaConfig;
+  session: SessionConfig;
+};
+
+let freeipaConfigCache: FreeIpaConfig | null = null;
+let sessionConfigCache: SessionConfig | null = null;
+
+export function getFreeIpaConfig(): FreeIpaConfig {
+  if (freeipaConfigCache) {
+    return freeipaConfigCache;
+  }
+
   const host = requireEnv('FREEIPA_HOST');
   if (host.includes('://') || host.includes('/')) {
     throw new Error('FREEIPA_HOST must only contain the LDAP host (no protocol or path).');
@@ -61,23 +72,37 @@ export function getAuthConfig(): AuthConfig {
     throw new Error('FREEIPA_USER_SEARCH_FILTER must include the placeholder {{username}}.');
   }
 
-  return {
-    freeipa: {
-      host,
-      port: parsePort(requireEnv('FREEIPA_PORT')),
-      baseDn: requireEnv('FREEIPA_BASE_DN'),
-      bindDn: requireEnv('FREEIPA_BIND_DN'),
-      bindPassword: requireEnv('FREEIPA_BIND_PASSWORD'),
-      userSearchBase: requireEnv('FREEIPA_USER_SEARCH_BASE'),
-      userSearchFilter,
-      useTls: parseBoolean(requireEnv('FREEIPA_USE_TLS'), 'FREEIPA_USE_TLS'),
-      timeoutMs: 8000,
-    },
-    session: {
-      secret: requireEnv('AUTOPATCH_SESSION_SECRET'),
-      maxAgeSeconds: 60 * 60 * 10,
-    },
+  freeipaConfigCache = {
+    host,
+    port: parsePort(requireEnv('FREEIPA_PORT')),
+    baseDn: requireEnv('FREEIPA_BASE_DN'),
+    bindDn: requireEnv('FREEIPA_BIND_DN'),
+    bindPassword: requireEnv('FREEIPA_BIND_PASSWORD'),
+    userSearchBase: requireEnv('FREEIPA_USER_SEARCH_BASE'),
+    userSearchFilter,
+    useTls: parseBoolean(requireEnv('FREEIPA_USE_TLS'), 'FREEIPA_USE_TLS'),
+    timeoutMs: 8000,
   };
+
+  return freeipaConfigCache;
 }
 
-export const authConfig = getAuthConfig();
+export function getSessionConfig(): SessionConfig {
+  if (sessionConfigCache) {
+    return sessionConfigCache;
+  }
+
+  sessionConfigCache = {
+    secret: requireEnv('AUTOPATCH_SESSION_SECRET'),
+    maxAgeSeconds: 60 * 60 * 10,
+  };
+
+  return sessionConfigCache;
+}
+
+export function getAuthConfig(): AuthConfig {
+  return {
+    freeipa: getFreeIpaConfig(),
+    session: getSessionConfig(),
+  };
+}
