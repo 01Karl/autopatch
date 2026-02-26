@@ -289,10 +289,10 @@ export default function HomePage({ searchParams }: { searchParams?: DashboardSea
                 <h2>Environment overview</h2>
                 <span className="chip">Environment: {selectedEnv.toUpperCase()}</span>
                 <span className="chip">Inventory: {inventory.inventory_path}</span>
-                <span className="chip">Source: {inventory.source ?? 'ansible'}</span>
+                <span className="chip">Source: {inventory.source ?? 'fixture'}</span>
               </div>
               <div className="p-4 text-sm text-slate-500 space-y-2">
-                <p>Läser från {selectedBasePath}/{selectedEnv}/inventory via Python-integration.</p>
+                <p>Läser från {selectedBasePath}/{selectedEnv}/inventory via lokal Next.js fixture-data.</p>
                 {inventory.error && <p className="text-rose-700">Inventory-fel: {inventory.error}</p>}
                 {inventoryByEnv.some((item) => item.source === 'fixture') && <p className="text-amber-700">Visar fejkdata från JSON-fixtures för snabb UI-test.</p>}
               </div>

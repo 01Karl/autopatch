@@ -1,8 +1,11 @@
+'use client';
+
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { FiActivity, FiDatabase, FiFolder, FiGrid, FiHome, FiMonitor, FiShield } from 'react-icons/fi';
 
 const primaryNav = [
-  { label: 'Home', href: '/', icon: FiHome, active: true },
+  { label: 'Home', href: '/', icon: FiHome },
   { label: 'Repository Management', href: '/repository', icon: FiFolder },
   { label: 'Compliance Center', href: '/repository/compliance', icon: FiShield },
   { label: 'Machines', href: '/machines', icon: FiMonitor },
@@ -15,6 +18,8 @@ const plannedNav = [
 ] as const;
 
 export default function PortalSidebarNav() {
+  const pathname = usePathname();
+
   return (
     <aside className="side-nav">
       <input className="side-search" placeholder="Search portal navigation" />
@@ -23,8 +28,10 @@ export default function PortalSidebarNav() {
         <p className="side-title">Workspace</p>
         {primaryNav.map((item) => {
           const Icon = item.icon;
+          const isActive = pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href));
+
           return (
-            <Link key={item.label} href={item.href} className={`side-link ${item.active ? 'active' : ''}`}>
+            <Link key={item.label} href={item.href} className={`side-link ${isActive ? 'active' : ''}`}>
               <span className="side-icon"><Icon /></span>
               <span>{item.label}</span>
             </Link>

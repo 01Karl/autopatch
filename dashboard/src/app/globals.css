@@ -4,13 +4,17 @@
 
 body {@apply bg-[#f3f2f1] text-slate-900;}
 
+html {
+  scrollbar-gutter: stable;
+}
+
 .azure-shell {@apply min-h-screen;}
-.top-header {@apply flex items-center gap-4 bg-[#cc0000] px-4 py-2 text-white;}
+.top-header {@apply flex min-h-[46px] items-center gap-4 bg-[#cc0000] px-4 py-2 text-white;}
 .brand {@apply text-sm font-semibold md:text-base;}
 .header-search {@apply hidden w-full max-w-xl rounded-sm border border-red-700 bg-red-50/95 px-3 py-1 text-sm text-slate-900 placeholder:text-slate-500 md:block;}
 .header-user {@apply ml-auto text-xs md:text-sm;}
 
-.shell-page-intro {@apply border-b border-slate-300 bg-white px-6 py-4 md:pl-[294px];}
+.shell-page-intro {@apply border-b border-slate-300 bg-white px-6 py-4;}
 .shell-page-title {@apply text-3xl font-semibold text-slate-900;}
 .shell-page-subtitle {@apply mt-1 text-xs text-slate-500;}
 .shell-page-breadcrumbs {@apply mb-1 flex flex-wrap items-center gap-2 text-xs text-slate-500;}
@@ -120,9 +124,3 @@ table td {@apply border-b border-slate-100 px-3 py-2;}
 
 .ansible-code-block {@apply max-h-[420px] overflow-auto rounded-md border border-slate-200 bg-slate-900 p-4 font-mono text-xs leading-5 text-slate-100;}
 
-.machine-content-area > .pane-context-text,
-.machine-content-area > .machine-actions-row,
-.machine-content-area > .machine-content-tabs {
-  margin-left: -1.5rem;
-  margin-right: -1.5rem;
-}

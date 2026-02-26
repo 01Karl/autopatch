@@ -6,7 +6,10 @@ import { DocumentTitle } from '@/app/_components/layout/DocumentTitle';
 startScheduler();
 
 export const metadata: Metadata = {
-  title: 'Overseer | Index',
+  title: {
+    default: 'Overseer | Index',
+    template: 'Overseer | %s',
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
