@@ -1,7 +1,5 @@
+import Link from 'next/link';
 import type { ReactNode } from 'react';
-import ManagerSidebarNav, { ManagerNavKey } from '@/app/_components/layout/ManagerSidebarNav';
-import AppHeader from '@/app/_components/layout/AppHeader';
-import AppFooter from '@/app/_components/layout/AppFooter';
 
 type ManagerShellPageProps = {
   title: string;
@@ -9,7 +7,7 @@ type ManagerShellPageProps = {
   workflowText: string;
   selectedEnv: string;
   selectedBasePath?: string;
-  activeView: ManagerNavKey;
+  activeView: string;
   breadcrumbs: { label: string; href?: string }[];
   children?: ReactNode;
 };
@@ -18,38 +16,38 @@ export default function ManagerShellPage({
   title,
   subtitle,
   workflowText,
-  selectedEnv,
-  selectedBasePath = 'environments',
-  activeView,
   breadcrumbs,
   children,
 }: ManagerShellPageProps) {
-  return (
-    <main className="azure-shell">
-      <AppHeader brand="Overseer Infrastructure Manager" title={title} rightContent={`Overseer · ${title}`} />
+  const domainRoot = breadcrumbs.find((crumb) => crumb.href && crumb.href !== '/')?.href;
 
+  return (
+    <>
       <section className="shell-page-intro">
         <div className="shell-page-breadcrumbs">
           {breadcrumbs.map((crumb, idx) => (
             <span key={`${crumb.label}-${idx}`} className="inline-flex items-center gap-2">
               {idx > 0 && <span>›</span>}
-              {crumb.href ? <a href={crumb.href}>{crumb.label}</a> : <span>{crumb.label}</span>}
+              {crumb.href ? <Link href={crumb.href}>{crumb.label}</Link> : <span>{crumb.label}</span>}
             </span>
           ))}
         </div>
         <h1 className="shell-page-title">{title}</h1>
         <p className="shell-page-subtitle">{subtitle}</p>
+        <div className="mt-3 flex flex-wrap gap-2 text-sm">
+          {domainRoot && (
+            <Link href={domainRoot} className="rounded-md border border-slate-300 px-3 py-1.5 hover:bg-slate-100">
+              Back to domain overview
+            </Link>
+          )}
+          <Link href="/" className="rounded-md border border-slate-300 px-3 py-1.5 hover:bg-slate-100">
+            Back to dashboard
+          </Link>
+        </div>
       </section>
 
-      <div className="shell-layout">
-        <ManagerSidebarNav activeView={activeView} selectedEnv={selectedEnv} selectedBasePath={selectedBasePath} />
-
-        <section className="main-pane">
-          <p className="pane-context-text">{workflowText}</p>
-          <section className="content-area">{children}</section>
-        </section>
-      </div>
-      <AppFooter />
-    </main>
+      <p className="pane-context-text">{workflowText}</p>
+      <section className="content-area">{children}</section>
+    </>
   );
 }
