@@ -1,6 +1,5 @@
 import { FiCpu, FiHardDrive, FiMapPin, FiMonitor, FiRefreshCw, FiShield, FiUsers } from 'react-icons/fi';
 import { getMockMachines, MachineEnv } from '@/lib/machines';
-import ManagerSidebarNav from '@/app/_components/layout/ManagerSidebarNav';
 import LinkTabs from '@/app/_components/ui/LinkTabs';
 import { AppButton, AppButtonLink, AppLabelButton } from '@/app/_components/ui/AppButton';
 import ColumnVisibilityDrawer, { COLUMN_OPTIONS, type ColumnKey } from './_components/ColumnVisibilityDrawer';
@@ -92,35 +91,15 @@ export default function MachinesPage({ searchParams }: { searchParams?: SearchPa
   const gridParams = new URLSearchParams(baseParams);
   gridParams.set('view', 'grid');
 
-  const pageSectionLabel = 'Machines';
-  const pageTitle = `Overseer - ${pageSectionLabel}`;
   const pageSubtitle = 'En samlad översikt av maskiner, filter och kolumnval för ett mjukare och tydligare arbetsflöde.';
   const pageWorkflowText = 'Standard workflow · Granska maskinmetadata, justera vyer och borra vidare till detaljer på ett lugnt och konsekvent sätt.';
 
   return (
-    <main className="azure-shell">
+    <>
       <input id="column-drawer-toggle" type="checkbox" className="peer sr-only" />
 
-      <header className="top-header">
-        <div className="brand">Overseer Infrastructure Manager</div>
-        <input className="header-search" placeholder="Search resources, services and docs" />
-        <div className="header-user">Overseer · {pageSectionLabel}</div>
-      </header>
-
-      <section className="shell-page-intro">
-        <div className="shell-page-breadcrumbs">
-          <a href="/">Home</a>
-          <span>›</span>
-          <span>{pageSectionLabel}</span>
-        </div>
-        <h1 className="shell-page-title">{pageTitle}</h1>
-        <p className="shell-page-subtitle">{pageSubtitle}</p>
-      </section>
-
-      <div className="shell-layout">
-        <ManagerSidebarNav activeView="machines-all" selectedEnv={selectedEnv} selectedBasePath="environments" />
-
-        <section className="main-pane">
+      <section className="space-y-5">
+          <p className="text-sm text-slate-500">{pageSubtitle}</p>
           <p className="pane-context-text">{pageWorkflowText}</p>
           <section className="command-bar">
             <div className="command-left">
@@ -130,7 +109,6 @@ export default function MachinesPage({ searchParams }: { searchParams?: SearchPa
             </div>
           </section>
 
-          <section className="content-area space-y-5">
             <div className="kpi-grid">
               <article className="kpi-card"><p className="kpi-title">Total machines</p><p className="kpi-value">{filtered.length}</p></article>
               <article className="kpi-card"><p className="kpi-title">Critical machines</p><p className="kpi-value text-rose-700">{criticalCount}</p></article>
@@ -254,9 +232,7 @@ export default function MachinesPage({ searchParams }: { searchParams?: SearchPa
                 </div>
               )}
             </section>
-          </section>
-        </section>
-      </div>
+      </section>
 
       <ColumnVisibilityDrawer
         selectedEnv={selectedEnv}
@@ -266,6 +242,6 @@ export default function MachinesPage({ searchParams }: { searchParams?: SearchPa
         selectedColumnSet={selectedColumnSet}
       />
 
-    </main>
+    </>
   );
 }

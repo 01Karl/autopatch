@@ -112,26 +112,7 @@ export default function MachineShell({
   ];
 
   return (
-    <main className="azure-shell">
-      <header className="top-header">
-        <div className="brand">Overseer Infrastructure Manager</div>
-        <input className="header-search" placeholder="Search machines, updates and docs" />
-        <div className="header-user">Connie Wilson · CONTOSO</div>
-      </header>
-
-      <section className="shell-page-intro">
-        <div className="shell-page-breadcrumbs">
-          <a href="/">Home</a>
-          <span>›</span>
-          <a href={`/machines?env=${selectedEnv}`}>Machines</a>
-          <span>›</span>
-          <span>{machineName}</span>
-        </div>
-        <h1 className="shell-page-title">Overseer Machine Manager</h1>
-        <p className="shell-page-subtitle">Machine details and operational views for {machineName}.</p>
-      </section>
-
-      <div className="shell-layout">
+    <div className="shell-layout">
         <aside className="side-nav machine-side-nav">
           <a className="side-link" href={`/machines?env=${selectedEnv}`}>
             <span className="side-icon"><FiArrowLeft /></span>
@@ -235,7 +216,6 @@ export default function MachineShell({
             {children}
           </section>
         </section>
-      </div>
-    </main>
+    </div>
   );
 }
