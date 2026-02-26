@@ -1,7 +1,15 @@
+import type { Metadata } from 'next';
 import './globals.css';
 import { startScheduler } from '@/lib/scheduler';
 
 startScheduler();
+
+export const metadata: Metadata = {
+  title: {
+    default: 'Overseer | Home',
+    template: '%s',
+  },
+};
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (

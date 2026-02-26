@@ -199,7 +199,7 @@ export default function HomePage({ searchParams }: { searchParams?: DashboardSea
   const withAssessmentCount = machineRows.filter((row) => row.periodicAssessment === 'Yes').length;
   const automationCoverage = machineRows.length ? Math.round((withAssessmentCount / machineRows.length) * 100) : 0;
   const managedBySchedules = machineRows.filter((row) => row.associatedSchedules !== '-').length;
-  const overviewTabBaseHref = `/?view=overview&env=${selectedEnv}&basePath=${selectedBasePath}`;
+  const overviewTabBaseHref = `/repository?view=overview&env=${selectedEnv}&basePath=${selectedBasePath}`;
   const recentRuns = envRuns.slice(0, 8);
 
   const routineTemplate = searchParams?.routineTemplate || playbookRoutines[0]?.key || 'linux-standard';
@@ -220,7 +220,7 @@ export default function HomePage({ searchParams }: { searchParams?: DashboardSea
   return (
     <main className="azure-shell">
       <header className="top-header">
-        <div className="brand">Overseer Infrastructure Manager</div>
+        <div className="brand">Overseer | Repository Management</div>
         <input className="header-search" placeholder="Search resources, services and docs" />
         <div className="header-user">
           <span>{session?.username || 'Okänd användare'}</span>
@@ -234,9 +234,9 @@ export default function HomePage({ searchParams }: { searchParams?: DashboardSea
         <div className="shell-page-breadcrumbs">
           <a href="/">Home</a>
           <span>›</span>
-          <span>Overseer Infrastructure Manager</span>
+          <span>Overseer | Repository Management</span>
         </div>
-        <h1 className="shell-page-title">Overseer Infrastructure Manager</h1>
+        <h1 className="shell-page-title">Overseer | Repository Management</h1>
         <p className="shell-page-subtitle">Översikt för Linux, Unix och FreeBSD med driftläge, automation och operativa signaler.</p>
       </section>
 
@@ -244,7 +244,7 @@ export default function HomePage({ searchParams }: { searchParams?: DashboardSea
         <ManagerSidebarNav activeView={activeView} selectedEnv={selectedEnv} selectedBasePath={selectedBasePath} />
 
         <section className="main-pane">
-          <p className="pane-context-text">Operations workspace · Samma tabmeny som maskin-vyerna för tydligare struktur i huvudöversikten.</p>
+          <p className="pane-context-text">Repository workspace · Foreman-liknande repository management för patchning, maskiner och historik.</p>
 
           {activeView === 'overview' && (
             <section className="table-card p-4 space-y-3">
@@ -597,7 +597,7 @@ export default function HomePage({ searchParams }: { searchParams?: DashboardSea
                     </label>
                     <div className="md:col-span-2 xl:col-span-5 flex gap-2">
                       <AppButton variant="primary" type="submit">Apply filters</AppButton>
-                      <AppButtonLink href={`/?env=${selectedEnv}&view=${activeView}&basePath=${selectedBasePath}`}>Reset filters</AppButtonLink>
+                      <AppButtonLink href={`/repository?env=${selectedEnv}&view=${activeView}&basePath=${selectedBasePath}`}>Reset filters</AppButtonLink>
                     </div>
                   </form>
                   <div className="overflow-x-auto">

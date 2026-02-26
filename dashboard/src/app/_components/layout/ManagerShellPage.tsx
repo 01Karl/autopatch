@@ -25,7 +25,7 @@ export default function ManagerShellPage({
   return (
     <main className="azure-shell">
       <header className="top-header">
-        <div className="brand">Overseer Infrastructure Manager</div>
+        <div className="brand">Overseer | {title}</div>
         <input className="header-search" placeholder="Search resources, services and docs" />
         <div className="header-user">Overseer · {title}</div>
       </header>

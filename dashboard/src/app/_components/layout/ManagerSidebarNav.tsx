@@ -75,8 +75,8 @@ const NAV_SECTIONS: NavSection[] = [
   {
     title: 'Manager',
     items: [
-      { key: 'overview', label: 'Overview', icon: FiHome, href: (env, basePath) => `/?env=${env}&view=overview&basePath=${basePath}` },
-      { key: 'get-started', label: 'Get started', icon: FiPlayCircle, href: (env, basePath) => `/?env=${env}&view=get-started&basePath=${basePath}` },
+      { key: 'overview', label: 'Overview', icon: FiHome, href: (env, basePath) => `/repository?env=${env}&view=overview&basePath=${basePath}` },
+      { key: 'get-started', label: 'Get started', icon: FiPlayCircle, href: (env, basePath) => `/repository?env=${env}&view=get-started&basePath=${basePath}` },
     ],
   },
   {
@@ -97,10 +97,10 @@ const NAV_SECTIONS: NavSection[] = [
         label: 'Compliance',
         icon: FiShield,
         children: [
-          { key: 'compliance-policies', label: 'Policies', href: (env) => `/compliance/policies?env=${env}` },
-          { key: 'compliance-scap-contents', label: 'SCAP Contents', href: (env) => `/compliance/scap-contents?env=${env}` },
-          { key: 'compliance-reports', label: 'Reports', href: (env) => `/compliance/reports?env=${env}` },
-          { key: 'compliance-tailoring-files', label: 'Tailoring Files', href: (env) => `/compliance/tailoring-files?env=${env}` },
+          { key: 'compliance-policies', label: 'Policies', href: (env) => `/repository/compliance/policies?env=${env}` },
+          { key: 'compliance-scap-contents', label: 'SCAP Contents', href: (env) => `/repository/compliance/scap-contents?env=${env}` },
+          { key: 'compliance-reports', label: 'Reports', href: (env) => `/repository/compliance/reports?env=${env}` },
+          { key: 'compliance-tailoring-files', label: 'Tailoring Files', href: (env) => `/repository/compliance/tailoring-files?env=${env}` },
         ],
       },
       {
@@ -108,10 +108,10 @@ const NAV_SECTIONS: NavSection[] = [
         label: 'Provisioning',
         icon: FiHardDrive,
         children: [
-          { key: 'provisioning-architectures', label: 'Architectures', href: (env) => `/provisioning/architectures?env=${env}` },
-          { key: 'provisioning-hardware-models', label: 'Hardware Models', href: (env) => `/provisioning/hardware-models?env=${env}` },
-          { key: 'provisioning-installation-media', label: 'Installation Media', href: (env) => `/provisioning/installation-media?env=${env}` },
-          { key: 'provisioning-operating-systems', label: 'Operating Systems', href: (env) => `/provisioning/operating-systems?env=${env}` },
+          { key: 'provisioning-architectures', label: 'Architectures', href: (env) => `/repository/provisioning/architectures?env=${env}` },
+          { key: 'provisioning-hardware-models', label: 'Hardware Models', href: (env) => `/repository/provisioning/hardware-models?env=${env}` },
+          { key: 'provisioning-installation-media', label: 'Installation Media', href: (env) => `/repository/provisioning/installation-media?env=${env}` },
+          { key: 'provisioning-operating-systems', label: 'Operating Systems', href: (env) => `/repository/provisioning/operating-systems?env=${env}` },
         ],
       },
     ],
@@ -119,17 +119,17 @@ const NAV_SECTIONS: NavSection[] = [
   {
     title: 'Content',
     items: [
-      { key: 'content-products', label: 'Products', icon: FiPackage, href: (env) => `/content/products?env=${env}` },
-      { key: 'content-product-credentials', label: 'Product Credentials', icon: FiKey, href: (env) => `/content/product-credentials?env=${env}` },
-      { key: 'content-synchronization', label: 'Synchronization', icon: FiRefreshCw, href: (env) => `/content/synchronization?env=${env}` },
+      { key: 'content-products', label: 'Products', icon: FiPackage, href: (env) => `/repository/content/products?env=${env}` },
+      { key: 'content-product-credentials', label: 'Product Credentials', icon: FiKey, href: (env) => `/repository/content/product-credentials?env=${env}` },
+      { key: 'content-synchronization', label: 'Synchronization', icon: FiRefreshCw, href: (env) => `/repository/content/synchronization?env=${env}` },
       {
         key: 'content-lifecycle',
         label: 'Lifecycle',
         icon: FiLayers,
         children: [
-          { key: 'content-lifecycle-environments', label: 'Lifecycle environments', href: (env) => `/content/lifecycle/environments?env=${env}` },
-          { key: 'content-content-views', label: 'Content views', href: (env) => `/content/lifecycle/content-views?env=${env}` },
-          { key: 'content-activation-keys', label: 'Activation Keys', href: (env) => `/content/lifecycle/activation-keys?env=${env}` },
+          { key: 'content-lifecycle-environments', label: 'Lifecycle environments', href: (env) => `/repository/content/lifecycle/environments?env=${env}` },
+          { key: 'content-content-views', label: 'Content views', href: (env) => `/repository/content/lifecycle/content-views?env=${env}` },
+          { key: 'content-activation-keys', label: 'Activation Keys', href: (env) => `/repository/content/lifecycle/activation-keys?env=${env}` },
         ],
       },
     ],
@@ -142,12 +142,12 @@ const NAV_SECTIONS: NavSection[] = [
         label: 'Configuration',
         icon: FiSettings,
         children: [
-          { key: 'configure-playbooks', label: 'Playbooks', href: (env) => `/configure/playbooks?env=${env}` },
-          { key: 'configure-ansible', label: 'Ansible', href: (env) => `/configure/ansible?env=${env}` },
-          { key: 'configure-roles-variables', label: 'Roles & Variables', href: (env) => `/configure/ansible/roles-variables?env=${env}` },
-          { key: 'configuration-locations', label: 'Locations', href: (env) => `/configuration/locations?env=${env}` },
-          { key: 'configuration-organizations', label: 'Organizations', href: (env) => `/configuration/organizations?env=${env}` },
-          { key: 'configuration-settings', label: 'Settings', href: (env) => `/configuration/settings?env=${env}` },
+          { key: 'configure-playbooks', label: 'Playbooks', href: (env) => `/repository/configure/playbooks?env=${env}` },
+          { key: 'configure-ansible', label: 'Ansible', href: (env) => `/repository/configure/ansible?env=${env}` },
+          { key: 'configure-roles-variables', label: 'Roles & Variables', href: (env) => `/repository/configure/ansible/roles-variables?env=${env}` },
+          { key: 'configuration-locations', label: 'Locations', href: (env) => `/repository/configuration/locations?env=${env}` },
+          { key: 'configuration-organizations', label: 'Organizations', href: (env) => `/repository/configuration/organizations?env=${env}` },
+          { key: 'configuration-settings', label: 'Settings', href: (env) => `/repository/configuration/settings?env=${env}` },
         ],
       },
     ],
