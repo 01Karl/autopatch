@@ -4,7 +4,7 @@ import { FiActivity, FiDatabase, FiFolder, FiGrid, FiHome, FiMonitor, FiShield }
 const primaryNav = [
   { label: 'Home', href: '/', icon: FiHome, active: true },
   { label: 'Repository Management', href: '/repository', icon: FiFolder },
-  { label: 'Compliance Center', href: '/compliance', icon: FiShield },
+  { label: 'Compliance Center', href: '/repository/compliance', icon: FiShield },
   { label: 'Machines', href: '/machines', icon: FiMonitor },
 ] as const;
 

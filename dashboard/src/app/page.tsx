@@ -4,7 +4,7 @@ import PortalSidebarNav from '@/app/_components/layout/PortalSidebarNav';
 
 const serviceLinks = [
   { label: 'Repository Management', href: '/repository', icon: FiFolder },
-  { label: 'Compliance Center', href: '/compliance', icon: FiShield },
+  { label: 'Compliance Center', href: '/repository/compliance', icon: FiShield },
   { label: 'Machines', href: '/machines', icon: FiMonitor },
   { label: 'Databases', href: '#', icon: FiDatabase, planned: true },
   { label: 'App Services', href: '#', icon: FiLayers, planned: true },
@@ -15,7 +15,7 @@ const navigateLinks = [
   { label: 'Repository workspaces', href: '/repository', icon: FiFolder },
   { label: 'Resource groups', href: '#', icon: FiGrid, planned: true },
   { label: 'All resources', href: '#', icon: FiLayers, planned: true },
-  { label: 'Compliance dashboard', href: '/compliance', icon: FiShield },
+  { label: 'Compliance dashboard', href: '/repository/compliance', icon: FiShield },
 ] as const;
 
 const toolLinks = [
@@ -35,7 +35,7 @@ const toolLinks = [
   {
     label: 'Security Center',
     description: 'Samla policies, avvikelser och skyddsstatus per miljö.',
-    href: '/compliance',
+    href: '/repository/compliance',
     icon: FiShield,
   },
 ] as const;
