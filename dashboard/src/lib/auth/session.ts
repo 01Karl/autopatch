@@ -1,5 +1,5 @@
 import crypto from 'node:crypto';
-import { authConfig } from '@/lib/config/auth';
+import { getSessionConfig } from '@/lib/config/auth';
 
 const SESSION_COOKIE_NAME = 'autopatch_session';
 const ALGO = 'aes-256-gcm';
@@ -18,7 +18,7 @@ export type SessionUser = {
 };
 
 function getSessionKey(): Buffer {
-  return crypto.createHash('sha256').update(authConfig.session.secret).digest();
+  return crypto.createHash('sha256').update(getSessionConfig().secret).digest();
 }
 
 function toBase64Url(input: Buffer): string {
@@ -34,7 +34,7 @@ export function createSessionToken(user: SessionUser): string {
   const cipher = crypto.createCipheriv(ALGO, getSessionKey(), iv);
   const payload: SessionPayload = {
     ...user,
-    expiresAt: Date.now() + authConfig.session.maxAgeSeconds * 1000,
+    expiresAt: Date.now() + getSessionConfig().maxAgeSeconds * 1000,
   };
 
   const ciphertext = Buffer.concat([
@@ -86,6 +86,6 @@ export function getSessionCookieName(): string {
 }
 
 export function getSessionMaxAge(): number {
-  return authConfig.session.maxAgeSeconds;
+  return getSessionConfig().maxAgeSeconds;
 }
 
