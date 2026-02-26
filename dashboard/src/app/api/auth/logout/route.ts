@@ -1,4 +1,4 @@
-import { getSessionCookieName } from '@/lib/auth';
+import { getSessionCookieName } from '@/lib/auth/session';
 import { NextResponse } from 'next/server';
 
 export async function POST(req: Request) {
@@ -7,6 +7,9 @@ export async function POST(req: Request) {
     name: getSessionCookieName(),
     value: '',
     maxAge: 0,
+    httpOnly: true,
+    sameSite: 'strict',
+    secure: process.env.NODE_ENV === 'production',
     path: '/',
   });
   return response;

@@ -27,7 +27,7 @@ export default function Header({ title, breadcrumbs = [], user }: HeaderProps) {
         <p className="truncate text-sm font-semibold text-slate-700">{title}</p>
       </div>
       <div className="header-user flex items-center gap-3">
-        <span className="truncate">{user ?? 'Loading user…'}</span>
+        <span className="truncate">{user ?? 'Not signed in'}</span>
         {user && (
           <form action="/api/auth/logout" method="post" className="inline">
             <button type="submit" className="rounded-md border border-slate-300 px-3 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100">
