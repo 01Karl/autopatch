@@ -10,29 +10,6 @@ import { AppButton, AppButtonLink } from '@/app/_components/ui/AppButton';
 import LinkTabs from '@/app/_components/ui/LinkTabs';
 import { buildPatchRoutineYaml } from '@/app/_lib/playbook-routine';
 
-type RunRow = {
-  id: number;
-  started_at: string;
-  env: string;
-  status: string;
-  ok_count: number;
-  failed_count: number;
-  skipped_count: number;
-  total_targets: number;
-  success_pct: number;
-  report_json?: string | null;
-  report_xlsx?: string | null;
-};
-
-type ScheduleRow = {
-  id: number;
-  name: string;
-  env: string;
-  day_of_week: string;
-  time_hhmm: string;
-  enabled: number;
-};
-
 type ServiceAccountRow = {
   id: number;
   name: string;
@@ -51,36 +28,20 @@ type MachineRow = {
   resourceType: string;
   patchOrchestration: string;
   periodicAssessment: string;
-  associatedSchedules: string;
   powerState: string;
 };
 
 const INVENTORY_ENVS = ['prod', 'qa', 'dev'] as const;
 const ENV_OPTIONS = ['all', ...INVENTORY_ENVS] as const;
 const DEFAULT_BASE_PATH = 'environments';
-const OVERVIEW_VIEW_KEYS = ['overview', 'get-started', 'playbooks', 'machines', 'history', 'update-reports'] as const;
-const HOME_OVERVIEW_TABS = ['summary', 'health', 'automation', 'activity'] as const;
+const OVERVIEW_VIEW_KEYS = ['overview', 'get-started', 'playbooks', 'machines'] as const;
+const HOME_OVERVIEW_TABS = ['summary', 'health', 'automation'] as const;
 
 function pct(ok: number, total: number) {
   return total ? ((ok / total) * 100).toFixed(1) : '0.0';
 }
 
-function statusLabel(status: string) {
-  const map: Record<string, string> = {
-    completed: 'Completed',
-    failed: 'Failed',
-    running: 'Running',
-    queued: 'Pending',
-    OK: 'Completed',
-    FAILED: 'Failed',
-  };
-  return map[status] ?? status;
-}
 
-function weekdayLabel(day: string) {
-  const map: Record<string, string> = { mon: 'Måndag', tue: 'Tisdag', wed: 'Onsdag', thu: 'Torsdag', fri: 'Fredag', sat: 'Lördag', sun: 'Söndag' };
-  return map[day] ?? day;
-}
 
 function machineStatusText(status: string) {
   if (status.toLowerCase().includes('fail')) return 'Unsupported';
@@ -126,31 +87,21 @@ export default function HomePage({ searchParams }: { searchParams?: DashboardSea
     ? (searchParams?.overviewTab as (typeof HOME_OVERVIEW_TABS)[number])
     : 'summary';
 
-  const runs = db.prepare('SELECT * FROM runs ORDER BY id DESC LIMIT 50').all() as RunRow[];
-  const schedules = db.prepare('SELECT id,name,env,day_of_week,time_hhmm,enabled FROM schedules ORDER BY id DESC').all() as ScheduleRow[];
   const playbookRoutines = getPlaybookRoutines();
   const serviceAccounts = db.prepare('SELECT id, name, purpose, username, created_at FROM service_accounts ORDER BY id DESC').all() as ServiceAccountRow[];
   const session = getServerSession();
-  const latestRun = runs[0];
-  const envRuns = selectedEnv === 'all' ? runs : runs.filter((run) => run.env === selectedEnv);
-  const latestEnvRun = envRuns[0];
   const { merged: inventory, inventoryByEnv } = mergeInventories(selectedEnv, selectedBasePath, INVENTORY_ENVS);
 
-  const totals = envRuns.reduce(
-    (acc, run) => {
-      acc.ok += run.ok_count;
-      acc.failed += run.failed_count;
-      acc.skipped += run.skipped_count;
-      acc.targets += run.total_targets;
-      return acc;
-    },
-    { ok: 0, failed: 0, skipped: 0, targets: 0 }
-  );
+  const totals = {
+    ok: inventory.server_count,
+    failed: 0,
+    skipped: 0,
+    targets: inventory.server_count,
+  };
 
-  const pendingRuns = envRuns.filter((run) => run.status === 'queued' || run.status === 'running').length;
-  const completedRuns = envRuns.filter((run) => run.status === 'completed' || run.status === 'OK').length;
-  const failedRuns = envRuns.filter((run) => run.status === 'failed' || run.status === 'FAILED').length;
-  const envSchedules = selectedEnv === 'all' ? schedules : schedules.filter((schedule) => schedule.env === selectedEnv);
+  const pendingRuns = 0;
+  const completedRuns = inventory.server_count;
+  const failedRuns = 0;
 
   const machineRows: MachineRow[] = inventory.servers.map((server, idx) => {
     const platform = idx % 9 === 0 ? 'FreeBSD' : idx % 7 === 0 ? 'Unix' : 'Linux';
@@ -161,19 +112,16 @@ export default function HomePage({ searchParams }: { searchParams?: DashboardSea
           ? unixDistributions[idx % unixDistributions.length]
           : linuxDistributions[idx % linuxDistributions.length];
 
-    const scheduleForEnv = schedules.find((schedule) => schedule.env === server.env)?.name ?? '-';
-
-    return {
+        return {
       name: server.hostname,
       env: server.env,
       cluster: server.cluster || 'standalone',
-      updateStatus: machineStatusText(statusLabel(latestEnvRun?.status ?? 'pending')),
+      updateStatus: idx % 6 == 0 ? 'Pending updates' : 'No pending updates',
       platform,
       distribution,
       resourceType: server.cluster === 'standalone' ? 'Bare metal server' : 'Virtual machine',
       patchOrchestration: server.cluster === 'standalone' ? 'Native package manager' : 'Agent managed rollout',
       periodicAssessment: idx % 2 === 0 ? 'Yes' : 'No',
-      associatedSchedules: scheduleForEnv,
       powerState: idx % 4 === 0 ? 'VM running' : 'VM deallocated',
     };
   });
@@ -196,9 +144,7 @@ export default function HomePage({ searchParams }: { searchParams?: DashboardSea
   const freebsdCount = machineRows.filter((row) => row.platform === 'FreeBSD').length;
   const withAssessmentCount = machineRows.filter((row) => row.periodicAssessment === 'Yes').length;
   const automationCoverage = machineRows.length ? Math.round((withAssessmentCount / machineRows.length) * 100) : 0;
-  const managedBySchedules = machineRows.filter((row) => row.associatedSchedules !== '-').length;
   const overviewTabBaseHref = `/repository?view=overview&env=${selectedEnv}&basePath=${selectedBasePath}`;
-  const recentRuns = envRuns.slice(0, 8);
 
   const routineTemplate = searchParams?.routineTemplate || playbookRoutines[0]?.key || 'linux-standard';
   const routineName = searchParams?.routineName || 'Patch Linux servers (EL & Debian)';
@@ -206,10 +152,6 @@ export default function HomePage({ searchParams }: { searchParams?: DashboardSea
   const routineSerial = Number.isFinite(Number(searchParams?.routineSerial)) ? Math.min(Math.max(Number(searchParams?.routineSerial), 1), 20) : 1;
   const elSecurityOnly = searchParams?.elSecurityOnly === '1';
   const generatedPlaybook = buildPatchRoutineYaml({ routineTemplate, routineName, routineHosts, routineSerial, elSecurityOnly });
-
-  const csvHeader = 'id,started_at,env,status,ok_count,failed_count,skipped_count,total_targets,success_pct';
-  const csvRows = runs.map((run) => [run.id, run.started_at, run.env, run.status, run.ok_count, run.failed_count, run.skipped_count, run.total_targets, run.success_pct].join(','));
-  const csvHref = `data:text/csv;charset=utf-8,${encodeURIComponent([csvHeader, ...csvRows].join('\n'))}`;
 
   const successShare = totals.targets ? (totals.ok / totals.targets) * 100 : 0;
   const failedShare = totals.targets ? (totals.failed / totals.targets) * 100 : 0;
@@ -253,10 +195,6 @@ export default function HomePage({ searchParams }: { searchParams?: DashboardSea
                   <h2 className="text-lg font-semibold">Overview workspace</h2>
                   <p className="text-xs text-slate-500">Välj fokusområde för att se sammanfattning, hälsa, automation eller aktivitet.</p>
                 </div>
-                <div className="flex items-center gap-2">
-                  <AppButtonLink href={csvHref} download="autopatch-runs.csv">Export to CSV</AppButtonLink>
-                  {latestRun?.report_xlsx && <AppButtonLink href={`/${latestRun.report_xlsx}`}>Export Excel</AppButtonLink>}
-                </div>
               </div>
 
               <LinkTabs
@@ -268,18 +206,8 @@ export default function HomePage({ searchParams }: { searchParams?: DashboardSea
                   { key: 'summary', label: 'Summary', href: `${overviewTabBaseHref}&overviewTab=summary` },
                   { key: 'health', label: 'Health status', href: `${overviewTabBaseHref}&overviewTab=health` },
                   { key: 'automation', label: 'Automation', href: `${overviewTabBaseHref}&overviewTab=automation` },
-                  { key: 'activity', label: 'Recent activity', href: `${overviewTabBaseHref}&overviewTab=activity` },
                 ]}
               />
-            </section>
-          )}
-
-          {activeView !== 'overview' && (
-            <section className="command-bar">
-              <div className="command-right ml-auto">
-                <AppButtonLink href={csvHref} download="autopatch-runs.csv">Export to CSV</AppButtonLink>
-                {latestRun?.report_xlsx && <AppButtonLink href={`/${latestRun.report_xlsx}`}>Export Excel</AppButtonLink>}
-              </div>
             </section>
           )}
 
@@ -304,7 +232,6 @@ export default function HomePage({ searchParams }: { searchParams?: DashboardSea
                   <article className="kpi-card"><p className="kpi-title">Managed nodes</p><p className="kpi-value">{inventory.server_count}</p></article>
                   <article className="kpi-card"><p className="kpi-title">Linux / Unix / FreeBSD</p><p className="kpi-value">{linuxCount} / {unixCount} / {freebsdCount}</p></article>
                   <article className="kpi-card"><p className="kpi-title">Automation coverage</p><p className="kpi-value text-emerald-700">{automationCoverage}%</p></article>
-                  <article className="kpi-card"><p className="kpi-title">Schedules attached</p><p className="kpi-value">{managedBySchedules}</p></article>
                 </div>
 
                 <section className="panel-grid">
@@ -313,8 +240,8 @@ export default function HomePage({ searchParams }: { searchParams?: DashboardSea
                     <div className="status-layout">
                       <div className="donut-wrap"><div className="donut" style={donutStyle}><div className="donut-inner"><strong>{inventory.server_count}</strong><span>Machines</span></div></div></div>
                       <div className="stat-list">
-                        <p><span>Healthy recent runs</span><strong>{completedRuns}</strong></p>
-                        <p><span>Queued/running</span><strong>{pendingRuns}</strong></p>
+                        <p><span>Healthy machines</span><strong>{completedRuns}</strong></p>
+                        <p><span>Queued tasks</span><strong>{pendingRuns}</strong></p>
                         <p><span>Failed</span><strong>{failedRuns}</strong></p>
                         <p><span>Compliance rate</span><strong>{pct(totals.ok, totals.targets)}%</strong></p>
                       </div>
@@ -322,9 +249,9 @@ export default function HomePage({ searchParams }: { searchParams?: DashboardSea
                   </article>
 
                   <article className="panel-card">
-                    <div className="panel-head"><h2>Run execution summary</h2><span className="chip">Last 30 days</span></div>
+                    <div className="panel-head"><h2>Execution summary</h2><span className="chip">Last 30 days</span></div>
                     <div className="stat-list">
-                      <p><span>Total workflow runs</span><strong>{envRuns.length}</strong></p>
+                      <p><span>Total managed nodes</span><strong>{inventory.server_count}</strong></p>
                       <p><span>Completed</span><strong>{completedRuns}</strong></p>
                       <p><span>Failed</span><strong>{failedRuns}</strong></p>
                       <p><span>In progress</span><strong>{pendingRuns}</strong></p>
@@ -336,7 +263,7 @@ export default function HomePage({ searchParams }: { searchParams?: DashboardSea
 
             {activeView === 'overview' && activeOverviewTab === 'health' && (
               <section className="table-card">
-                <div className="table-head"><h2>Health status by environment</h2><span className="chip">Signals from inventory + recent runs</span></div>
+                <div className="table-head"><h2>Health status by environment</h2><span className="chip">Signals from inventory</span></div>
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead><tr><th>Environment</th><th>Nodes</th><th>Inventory source</th><th>Run status</th><th>Compliance</th></tr></thead>
@@ -362,54 +289,9 @@ export default function HomePage({ searchParams }: { searchParams?: DashboardSea
                   <div className="table-head"><h2>Automation coverage</h2></div>
                   <div className="p-4 space-y-2 text-sm">
                     <p className="flex items-center justify-between"><span>Periodic assessment coverage</span><strong>{automationCoverage}%</strong></p>
-                    <p className="flex items-center justify-between"><span>Machines on schedule</span><strong>{managedBySchedules} / {machineRows.length}</strong></p>
                     <p className="flex items-center justify-between"><span>Queued workflow jobs</span><strong>{pendingRuns}</strong></p>
                   </div>
                 </article>
-
-                <article className="table-card">
-                  <div className="table-head"><h2>Active schedules</h2><span className="chip">{envSchedules.length} configured</span></div>
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                      <thead><tr><th>Name</th><th>Environment</th><th>Window</th><th>Status</th></tr></thead>
-                      <tbody>
-                        {envSchedules.map((schedule) => (
-                          <tr key={schedule.id}>
-                            <td>{schedule.name}</td>
-                            <td>{schedule.env.toUpperCase()}</td>
-                            <td>{weekdayLabel(schedule.day_of_week)} {schedule.time_hhmm}</td>
-                            <td>{schedule.enabled ? 'Enabled' : 'Disabled'}</td>
-                          </tr>
-                        ))}
-                        {envSchedules.length === 0 && <tr><td colSpan={4} className="text-slate-500">Inga scheman hittades för valt environment.</td></tr>}
-                      </tbody>
-                    </table>
-                  </div>
-                </article>
-              </section>
-            )}
-
-            {activeView === 'overview' && activeOverviewTab === 'activity' && (
-              <section className="table-card">
-                <div className="table-head"><h2>Recent workflow activity</h2><span className="chip">Last {recentRuns.length} runs</span></div>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead><tr><th>ID</th><th>Started</th><th>Environment</th><th>Status</th><th>Success</th><th>Targets</th></tr></thead>
-                    <tbody>
-                      {recentRuns.map((run) => (
-                        <tr key={run.id}>
-                          <td>{run.id}</td>
-                          <td>{run.started_at}</td>
-                          <td>{run.env.toUpperCase()}</td>
-                          <td>{statusLabel(run.status)}</td>
-                          <td>{run.success_pct}%</td>
-                          <td>{run.total_targets}</td>
-                        </tr>
-                      ))}
-                      {recentRuns.length === 0 && <tr><td colSpan={6} className="text-slate-500">Inga körningar hittades ännu.</td></tr>}
-                    </tbody>
-                  </table>
-                </div>
               </section>
             )}
 
@@ -586,7 +468,7 @@ export default function HomePage({ searchParams }: { searchParams?: DashboardSea
                     <table className="w-full text-sm">
                       <thead>
                         <tr>
-                          <th>Name</th><th>Cluster</th><th>Update status</th><th>Platform</th><th>Distribution</th><th>Resource type</th><th>Patch orchestration</th><th>Periodic assessment</th><th>Associated schedules</th><th>Status</th>
+                          <th>Name</th><th>Cluster</th><th>Update status</th><th>Platform</th><th>Distribution</th><th>Resource type</th><th>Patch orchestration</th><th>Periodic assessment</th><th>Status</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -602,64 +484,16 @@ export default function HomePage({ searchParams }: { searchParams?: DashboardSea
                                 </span>
                               </td>
                               <td>{row.cluster}</td>
-                              <td>{row.updateStatus}</td><td>{row.platform}</td><td>{row.distribution}</td><td>{row.resourceType}</td><td>{row.patchOrchestration}</td><td>{row.periodicAssessment}</td><td>{row.associatedSchedules}</td><td>{row.powerState}</td>
+                              <td>{row.updateStatus}</td><td>{row.platform}</td><td>{row.distribution}</td><td>{row.resourceType}</td><td>{row.patchOrchestration}</td><td>{row.periodicAssessment}</td><td>{row.powerState}</td>
                             </tr>
                           );
                         })}
-                        {filteredMachineRows.length === 0 && <tr><td colSpan={10} className="text-slate-500">No machines found with selected filters.</td></tr>}
+                        {filteredMachineRows.length === 0 && <tr><td colSpan={9} className="text-slate-500">No machines found with selected filters.</td></tr>}
                       </tbody>
                     </table>
                   </div>
                 </section>
               </>
-            )}
-
-            {activeView === 'history' && (
-              <section className="table-card">
-                <div className="table-head"><h2>Update run history</h2></div>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead><tr><th>ID</th><th>Start</th><th>Env</th><th>Status</th><th>Success</th><th>Reports</th></tr></thead>
-                    <tbody>
-                      {envRuns.map((run) => (
-                        <tr key={run.id}>
-                          <td>#{run.id}</td><td>{run.started_at}</td><td>{run.env}</td><td>{statusLabel(run.status)}</td><td>{run.success_pct}%</td>
-                          <td className="space-x-2">{run.report_json && <a className="link" href={`/${run.report_json}`}>JSON</a>}{run.report_xlsx && <a className="link" href={`/${run.report_xlsx}`}>XLSX</a>}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </section>
-            )}
-
-            {activeView === 'update-reports' && (
-              <section className="panel-grid">
-                <article className="table-card">
-                  <div className="table-head"><h2>Cluster summary</h2></div>
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                      <thead><tr><th>Cluster</th><th>Nodes</th><th>Env</th></tr></thead>
-                      <tbody>
-                        {inventoryByEnv.flatMap((envInventory) =>
-                          envInventory.clusters.map((cluster) => (
-                            <tr key={`${envInventory.env}-${cluster.name}`}><td>{cluster.name}</td><td>{cluster.nodes}</td><td>{envInventory.env}</td></tr>
-                          ))
-                        )}
-                        {inventory.clusters.length === 0 && <tr><td colSpan={3} className="text-slate-500">No cluster groups found (*_cluster).</td></tr>}
-                      </tbody>
-                    </table>
-                  </div>
-                </article>
-
-                <article className="table-card p-4 space-y-2">
-                  <h2 className="text-sm font-semibold">Schedules in {selectedEnv.toUpperCase()}</h2>
-                  {envSchedules.map((s) => (
-                    <p className="text-sm" key={s.id}>{s.name} · {weekdayLabel(s.day_of_week)} {s.time_hhmm} · {s.enabled ? 'Enabled' : 'Disabled'}</p>
-                  ))}
-                  {envSchedules.length === 0 && <p className="text-sm text-slate-500">No schedules configured yet.</p>}
-                </article>
-              </section>
             )}
           </section>
         </section>

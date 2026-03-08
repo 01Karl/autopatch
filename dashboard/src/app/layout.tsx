@@ -1,9 +1,6 @@
 import type { Metadata } from 'next';
 import './globals.css';
-import { startScheduler } from '@/lib/scheduler';
 import { DocumentTitle } from '@/app/_components/layout/DocumentTitle';
-
-startScheduler();
 
 export const metadata: Metadata = {
   title: {
