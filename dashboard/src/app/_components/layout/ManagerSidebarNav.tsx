@@ -38,9 +38,7 @@ export type ManagerNavKey =
   | 'content-lifecycle-environments'
   | 'content-content-views'
   | 'content-activation-keys'
-  | 'history'
-  | 'update-reports';
-
+;
 type NavChildItem = {
   key: ManagerNavKey;
   label: string;
@@ -66,7 +64,7 @@ type ManagerSidebarNavProps = {
   selectedBasePath: string;
 };
 
-const OVERVIEW_VIEWS: ManagerNavKey[] = ['overview', 'get-started', 'playbooks', 'machines', 'history', 'update-reports'];
+const OVERVIEW_VIEWS: ManagerNavKey[] = ['overview', 'get-started', 'playbooks', 'machines'];
 
 
 const SIDEBAR_OPEN_GROUPS_STORAGE_KEY = 'manager-sidebar-open-groups';

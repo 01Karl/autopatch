@@ -28,7 +28,7 @@ const toolLinks = [
   {
     label: 'Operations Monitor',
     description: 'Övervaka körningar och infrastrukturstatus i realtid.',
-    href: '/repository?view=history',
+    href: '/repository?view=overview',
     icon: FiTrendingUp,
   },
   {
